@@ -35,7 +35,8 @@ const PLAN_MAPPING: Record<string, { id: string; name: string }> = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
-    const signature = headers().get('whop-signature')
+    const headersList = await headers()
+    const signature = headersList.get('whop-signature')
     
     // Verify webhook signature (implement based on Whop's documentation)
     if (WHOP_WEBHOOK_SECRET && !verifyWebhookSignature(body, signature, WHOP_WEBHOOK_SECRET)) {
