@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Crown, Lock, AlertTriangle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 
 interface VideoCreationGuardProps {
   children: ReactNode
@@ -16,8 +16,18 @@ interface VideoCreationGuardProps {
 export function VideoCreationGuard({ children, feature = 'create videos' }: VideoCreationGuardProps) {
   const { planInfo, loading, canCreateVideo } = useSubscription()
   const router = useRouter()
+  const [fallbackLoading, setFallbackLoading] = useState(true)
 
-  if (loading) {
+  // Fallback timeout to prevent infinite loading
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      setFallbackLoading(false)
+    }, 15000) // 15 second fallback timeout
+
+    return () => clearTimeout(fallbackTimer)
+  }, [])
+
+  if (loading && fallbackLoading) {
     // In development, allow access after a short delay to avoid infinite loading
     if (process.env.NODE_ENV === 'development') {
       return <>{children}</>
@@ -29,8 +39,8 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
     )
   }
 
-  // Allow access if user can create videos
-  if (canCreateVideo) {
+  // Allow access if user can create videos OR if fallback triggered (graceful degradation)
+  if (canCreateVideo || (!loading && !fallbackLoading && !planInfo)) {
     return <>{children}</>
   }
 

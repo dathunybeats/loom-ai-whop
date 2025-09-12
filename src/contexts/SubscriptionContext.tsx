@@ -36,19 +36,38 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (currentUser: User) => {
     try {
-      const planData = await getUserPlanInfo(currentUser.id)
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Subscription fetch timeout')), 10000) // 10 second timeout
+      })
+      
+      const planDataPromise = getUserPlanInfo(currentUser.id)
+      const planData = await Promise.race([planDataPromise, timeoutPromise]) as any
       setPlanInfo(planData)
       
-      // Fetch detailed subscription data
-      const { data: subData } = await supabase
+      // Fetch detailed subscription data with timeout
+      const subDataPromise = supabase
         .from('user_subscriptions')
         .select('*')
         .eq('user_id', currentUser.id)
         .single()
       
+      const { data: subData } = await Promise.race([subDataPromise, timeoutPromise]) as any
       setSubscription(subData)
     } catch (error) {
       console.error('Error fetching subscription data:', error)
+      
+      // Set fallback plan info to allow basic functionality
+      setPlanInfo({
+        planName: 'Free Trial',
+        planId: null,
+        status: 'trialing',
+        isActive: true,
+        videosRemaining: 5,
+        currentPeriodEnd: null
+      })
+      
+      setSubscription(null)
     } finally {
       setLoading(false)
     }
@@ -81,20 +100,34 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        // Add timeout to auth initialization
+        const authTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 8000) // 8 second timeout
+        })
+        
+        const authPromise = supabase.auth.getUser()
+        const { data: { user: currentUser } } = await Promise.race([authPromise, authTimeout]) as any
         setUser(currentUser)
         
         if (currentUser) {
           await fetchUserData(currentUser)
         } else {
-          // No user authenticated - stop loading in development mode
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Dev] No authenticated user, skipping subscription fetch')
-          }
+          console.log('No authenticated user, skipping subscription fetch')
           setLoading(false)
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
+        
+        // Set fallback state on error
+        setUser(null)
+        setPlanInfo({
+          planName: 'Free Trial',
+          planId: null,
+          status: 'trialing',
+          isActive: true,
+          videosRemaining: 5,
+          currentPeriodEnd: null
+        })
         setLoading(false)
       }
     }
