@@ -54,7 +54,7 @@ async function getDashboardData(userId: string) {
 export default async function Dashboard({
   searchParams
 }: {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const supabase = await createClient()
 
@@ -66,13 +66,16 @@ export default async function Dashboard({
     redirect('/login')
   }
 
+  // Await searchParams in Next.js 15
+  const params = await searchParams
+
   // If user came from successful upgrade, redirect to upgrade-success page
-  const upgraded = searchParams.upgraded
+  const upgraded = params.upgraded
   if (upgraded === 'true') {
     const urlParams = new URLSearchParams()
     
     // Preserve all query parameters from the original URL
-    Object.entries(searchParams).forEach(([key, value]) => {
+    Object.entries(params).forEach(([key, value]) => {
       if (value && typeof value === 'string') {
         urlParams.set(key, value)
       }
