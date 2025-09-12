@@ -53,17 +53,21 @@ export async function POST(request: NextRequest) {
     const supabase = createClient()
 
     switch (type) {
-      case 'membership:created':
-      case 'membership:updated':
+      case 'payment_succeeded':
+      case 'membership_went_valid':
         await handleMembershipUpsert(supabase, membership)
         break
       
-      case 'membership:cancelled':
+      case 'membership_cancel_at_period_end_changed':
         await handleMembershipCancellation(supabase, membership)
         break
       
-      case 'membership:expired':
+      case 'membership_went_invalid':
         await handleMembershipExpiry(supabase, membership)
+        break
+      
+      case 'refund_created':
+        await handleRefund(supabase, membership)
         break
       
       default:
@@ -180,12 +184,34 @@ async function handleMembershipCancellation(supabase: any, membership: WhopMembe
 async function handleMembershipExpiry(supabase: any, membership: WhopMembership) {
   const { error } = await supabase
     .from('user_subscriptions')
-    .update({ status: 'expired' })
+    .update({ 
+      status: 'expired',
+      updated_at: new Date().toISOString()
+    })
     .eq('whop_subscription_id', membership.id)
 
   if (error) {
+    console.error('Failed to expire subscription:', error)
     throw new Error(`Failed to expire subscription: ${error.message}`)
   }
+  console.log('Expired subscription:', membership.id)
+}
+
+async function handleRefund(supabase: any, membership: WhopMembership) {
+  // When a refund is created, we should expire the subscription
+  const { error } = await supabase
+    .from('user_subscriptions')
+    .update({ 
+      status: 'refunded',
+      updated_at: new Date().toISOString()
+    })
+    .eq('whop_subscription_id', membership.id)
+
+  if (error) {
+    console.error('Failed to process refund:', error)
+    throw new Error(`Failed to process refund: ${error.message}`)
+  }
+  console.log('Processed refund for subscription:', membership.id)
 }
 
 // Placeholder for webhook signature verification
