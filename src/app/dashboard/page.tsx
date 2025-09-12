@@ -51,7 +51,11 @@ async function getDashboardData(userId: string) {
   }
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
   const supabase = await createClient()
 
   const {
@@ -60,6 +64,21 @@ export default async function Dashboard() {
 
   if (!user) {
     redirect('/login')
+  }
+
+  // If user came from successful upgrade, redirect to upgrade-success page
+  const upgraded = searchParams.upgraded
+  if (upgraded === 'true') {
+    const urlParams = new URLSearchParams()
+    
+    // Preserve all query parameters from the original URL
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (value && typeof value === 'string') {
+        urlParams.set(key, value)
+      }
+    })
+    
+    redirect(`/dashboard/upgrade-success?${urlParams.toString()}`)
   }
 
   const { projects, analytics, error } = await getDashboardData(user.id)
