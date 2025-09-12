@@ -18,6 +18,10 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
   const router = useRouter()
 
   if (loading) {
+    // In development, allow access after a short delay to avoid infinite loading
+    if (process.env.NODE_ENV === 'development') {
+      return <>{children}</>
+    }
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

@@ -80,12 +80,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      setUser(currentUser)
-      
-      if (currentUser) {
-        await fetchUserData(currentUser)
-      } else {
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        setUser(currentUser)
+        
+        if (currentUser) {
+          await fetchUserData(currentUser)
+        } else {
+          // No user authenticated - stop loading in development mode
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Dev] No authenticated user, skipping subscription fetch')
+          }
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
         setLoading(false)
       }
     }

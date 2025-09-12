@@ -1,8 +1,4 @@
-'use client'
-
-import { createClient } from '@/lib/supabase/client'
-import { useEffect, useState } from 'react'
-import type { User } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -12,24 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Check, ChevronDown, Star, ArrowRight, Play, Shield, Zap, Target, Users, TrendingUp, Clock } from 'lucide-react'
 import { PricingPlans } from '@/components/pricing-plans'
 
-export default function Home() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+export default async function Home() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      setLoading(false)
-    }
-    checkUser()
-  }, [])
-
-  if (loading) {
-    return <div className="min-h-screen bg-background" />
-  }
-
+  // Server-side redirect for authenticated users
   if (user) {
     redirect('/dashboard')
   }
