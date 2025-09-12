@@ -54,8 +54,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       
       const { data: subData } = await Promise.race([subDataPromise, timeoutPromise]) as any
       setSubscription(subData)
-    } catch (error) {
-      console.error('Error fetching subscription data:', error)
+    } catch (error: any) {
+      console.warn('Subscription service timeout, using fallback state:', error.message)
       
       // Set fallback plan info to allow basic functionality
       setPlanInfo({
@@ -115,8 +115,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           console.log('No authenticated user, skipping subscription fetch')
           setLoading(false)
         }
-      } catch (error) {
-        console.error('Auth initialization error:', error)
+      } catch (error: any) {
+        console.warn('Auth service timeout, using fallback state:', error.message)
         
         // Set fallback state on error
         setUser(null)

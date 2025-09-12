@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ArrowUpCircleIcon,
@@ -20,6 +21,7 @@ import {
   UsersIcon,
 } from "lucide-react"
 
+import { createClient } from "@/lib/supabase/client"
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
@@ -158,6 +160,37 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [user, setUser] = useState(data.user)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        
+        if (authUser) {
+          // Get profile data with full_name
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', authUser.id)
+            .single()
+
+          setUser({
+            name: profile?.full_name || authUser.user_metadata?.full_name || "User",
+            email: authUser.email || "user@loom.ai",
+            avatar: authUser.user_metadata?.avatar_url || "",
+          })
+        }
+      } catch (error) {
+        console.warn('Failed to fetch user data:', error)
+        // Keep default fallback user data
+      }
+    }
+
+    getUser()
+  }, [supabase])
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -181,7 +214,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   )
