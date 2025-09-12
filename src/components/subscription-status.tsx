@@ -1,110 +1,131 @@
-'use client'
+"use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { 
-  UserSubscription, 
-  getPlanById, 
-  getVideoLimitRemaining, 
-  isTrialExpired,
-  formatPrice 
-} from '@/lib/subscription'
-import { Calendar, CreditCard, Video } from 'lucide-react'
+import { useState } from "react"
+import Link from "next/link"
+import { useSubscription } from "@/contexts/SubscriptionContext"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Crown, Zap, AlertCircle, Calendar, Video } from "lucide-react"
+import { UpgradeModal } from "@/components/upgrade-modal"
 
-interface SubscriptionStatusProps {
-  subscription: UserSubscription
-  onUpgrade?: () => void
-}
+export function SubscriptionStatus() {
+  const { planInfo, loading, user } = useSubscription()
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
 
-export function SubscriptionStatus({ subscription, onUpgrade }: SubscriptionStatusProps) {
-  const plan = getPlanById(subscription.planId)
-  const videoLimitRemaining = getVideoLimitRemaining(subscription)
-  const trialExpired = isTrialExpired(subscription)
-  
-  if (!plan) return null
-
-  const getStatusBadge = () => {
-    switch (subscription.status) {
-      case 'active':
-        return <Badge variant="default">Active</Badge>
-      case 'trial':
-        return trialExpired ? 
-          <Badge variant="destructive">Trial Expired</Badge> :
-          <Badge variant="secondary">Free Trial</Badge>
-      case 'cancelled':
-        return <Badge variant="outline">Cancelled</Badge>
-      case 'expired':
-        return <Badge variant="destructive">Expired</Badge>
-      default:
-        return <Badge variant="outline">Unknown</Badge>
-    }
-  }
-
-  const getTrialProgress = () => {
-    if (subscription.status !== 'trial' || !plan.videoLimit) return null
-    
-    const videosUsed = subscription.trialVideosUsed || 0
-    const progressPercentage = (videosUsed / plan.videoLimit) * 100
-    
+  if (loading || !planInfo) {
     return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="flex items-center gap-1">
-            <Video className="h-4 w-4" />
-            Videos Used
-          </span>
-          <span>{videosUsed} / {plan.videoLimit}</span>
-        </div>
-        <Progress value={progressPercentage} className="h-2" />
-        <p className="text-xs text-muted-foreground">
-          {videoLimitRemaining} videos remaining in your trial
-        </p>
+      <div className="px-3 py-2">
+        <div className="animate-pulse bg-muted rounded h-16 w-full" />
       </div>
     )
   }
 
+  // Calculate days remaining for trial
+  const calculateDaysRemaining = () => {
+    if (!planInfo.currentPeriodEnd) return null
+    const endDate = new Date(planInfo.currentPeriodEnd)
+    const now = new Date()
+    const diffTime = endDate.getTime() - now.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return Math.max(0, diffDays)
+  }
+
+  const daysRemaining = calculateDaysRemaining()
+  const isTrial = planInfo.planName === 'Free Trial'
+  const isExpired = !planInfo.isActive
+  const videosUsed = planInfo.videosRemaining !== null ? 5 - planInfo.videosRemaining : 0
+  const totalVideos = planInfo.videosRemaining !== null ? 5 : null
+
+  // Determine display content
+  const getStatusContent = () => {
+    if (isExpired) {
+      return {
+        badge: { text: "Expired", variant: "destructive" as const, icon: AlertCircle },
+        title: "Plan Expired",
+        subtitle: "Upgrade to continue",
+        showUpgrade: true,
+        showProgress: false
+      }
+    }
+
+    if (isTrial) {
+      return {
+        badge: { text: "Free Trial", variant: "secondary" as const, icon: Zap },
+        title: daysRemaining !== null ? `${daysRemaining} days left` : "Free Trial",
+        subtitle: totalVideos ? `${videosUsed}/${totalVideos} videos used` : "Unlimited videos",
+        progress: totalVideos ? (videosUsed / totalVideos) * 100 : null,
+        showUpgrade: true,
+        showProgress: totalVideos !== null
+      }
+    }
+
+    // Paid plan
+    return {
+      badge: { text: planInfo.planName, variant: "default" as const, icon: Crown },
+      title: "Active Plan", 
+      subtitle: totalVideos ? `${videosUsed} videos used this month` : "Unlimited videos",
+      progress: null, // Paid plans typically don't show progress
+      showUpgrade: false,
+      showProgress: false
+    }
+  }
+
+  const status = getStatusContent()
+
   return (
-    <Card>
-      <CardHeader>
+    <div className="px-3 py-2 border-b border-sidebar-border">
+      <div className="space-y-2.5">
+        {/* Badge */}
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              {plan.name} Plan
-            </CardTitle>
-            <CardDescription>
-              {plan.price > 0 ? `${formatPrice(plan.price)}/month` : 'Free'}
-            </CardDescription>
+          <Badge variant={status.badge.variant} className="text-xs px-2 py-0.5">
+            <status.badge.icon className="h-3 w-3 mr-1" />
+            {status.badge.text}
+          </Badge>
+        </div>
+
+        {/* Title and Subtitle */}
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium leading-none">{status.title}</p>
+          <p className="text-xs text-muted-foreground leading-none">{status.subtitle}</p>
+        </div>
+
+        {/* Progress Bar */}
+        {status.showProgress && status.progress !== null && (
+          <div className="space-y-1">
+            <Progress 
+              value={status.progress} 
+              className="h-1.5" 
+            />
           </div>
-          {getStatusBadge()}
-        </div>
-      </CardHeader>
+        )}
 
-      <CardContent className="space-y-4">
-        {getTrialProgress()}
-        
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>
-            {subscription.status === 'trial' ? 'Trial' : 'Current period'} ends{' '}
-            {subscription.currentPeriodEnd.toLocaleDateString()}
-          </span>
-        </div>
+        {/* Trial Period Info */}
+        {isTrial && daysRemaining !== null && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>Trial ends in {daysRemaining} days</span>
+          </div>
+        )}
 
-        {(trialExpired || subscription.status === 'expired') && onUpgrade && (
-          <Button onClick={onUpgrade} className="w-full">
+        {/* Upgrade Button */}
+        {status.showUpgrade && (
+          <Button 
+            onClick={() => setIsUpgradeModalOpen(true)}
+            size="sm" 
+            className="w-full text-xs h-7"
+          >
+            <Crown className="h-3 w-3 mr-1" />
             Upgrade Plan
           </Button>
         )}
-
-        {subscription.status === 'trial' && !trialExpired && onUpgrade && (
-          <Button onClick={onUpgrade} variant="outline" className="w-full">
-            Upgrade to Premium
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+      
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+      />
+    </div>
   )
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ArrowUpCircleIcon,
@@ -21,11 +20,12 @@ import {
   UsersIcon,
 } from "lucide-react"
 
-import { createClient } from "@/lib/supabase/client"
+import { useSubscription } from "@/contexts/SubscriptionContext"
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
+import { SubscriptionStatus } from "@/components/subscription-status"
 import {
   Sidebar,
   SidebarContent,
@@ -160,36 +160,19 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [user, setUser] = useState(data.user)
-  const supabase = createClient()
+  const { user, userProfile, loading } = useSubscription()
 
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        
-        if (authUser) {
-          // Get profile data with full_name
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', authUser.id)
-            .single()
-
-          setUser({
-            name: profile?.full_name || authUser.user_metadata?.full_name || "User",
-            email: authUser.email || "user@loom.ai",
-            avatar: authUser.user_metadata?.avatar_url || "",
-          })
-        }
-      } catch (error) {
-        console.warn('Failed to fetch user data:', error)
-        // Keep default fallback user data
+  // Use real user data from SubscriptionContext or fallback to default
+  const displayUser = React.useMemo(() => {
+    if (user) {
+      return {
+        name: userProfile?.full_name || user.user_metadata?.full_name || "User",
+        email: user.email || "user@loom.ai", 
+        avatar: user.user_metadata?.avatar_url || "",
       }
     }
-
-    getUser()
-  }, [supabase])
+    return data.user
+  }, [user, userProfile])
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -214,7 +197,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <SubscriptionStatus />
+        <NavUser user={displayUser} />
       </SidebarFooter>
     </Sidebar>
   )

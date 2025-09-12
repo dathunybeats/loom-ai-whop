@@ -18,7 +18,12 @@
       "Bash(vercel:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(PORT=3000 npm run dev)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "WebFetch(domain:dev.whop.com)"
     ],
     "deny": [],
     "ask": []

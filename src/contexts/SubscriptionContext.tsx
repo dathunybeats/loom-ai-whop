@@ -16,6 +16,7 @@ interface PlanInfo {
 
 interface SubscriptionContextType {
   user: User | null
+  userProfile: { full_name?: string } | null
   planInfo: PlanInfo | null
   subscription: UserSubscription | null
   loading: boolean
@@ -28,6 +29,7 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [userProfile, setUserProfile] = useState<{ full_name?: string } | null>(null)
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null)
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,26 +38,51 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (currentUser: User) => {
     try {
-      // Add timeout to prevent hanging
+      // First, immediately set profile data from user metadata if available
+      if (currentUser.user_metadata?.full_name) {
+        setUserProfile({ full_name: currentUser.user_metadata.full_name })
+      }
+
+      // In development, use longer timeouts or no timeouts
+      const timeoutMs = process.env.NODE_ENV === 'development' ? 30000 : 10000
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Subscription fetch timeout')), 10000) // 10 second timeout
+        setTimeout(() => reject(new Error('Service timeout')), timeoutMs)
       })
       
-      const planDataPromise = getUserPlanInfo(currentUser.id)
-      const planData = await Promise.race([planDataPromise, timeoutPromise]) as any
-      setPlanInfo(planData)
-      
-      // Fetch detailed subscription data with timeout
-      const subDataPromise = supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .single()
-      
-      const { data: subData } = await Promise.race([subDataPromise, timeoutPromise]) as any
-      setSubscription(subData)
+      // Fetch profile first (fastest), then other data
+      try {
+        const { data: profile } = await Promise.race([
+          supabase.from('profiles').select('full_name').eq('id', currentUser.id).single(),
+          timeoutPromise
+        ]) as any
+        if (profile) setUserProfile(profile)
+      } catch (e) {
+        console.warn('Profile fetch failed, using fallback')
+      }
+
+      // Fetch subscription data with fallback
+      try {
+        const [planData, { data: subData }] = await Promise.all([
+          Promise.race([getUserPlanInfo(currentUser.id), timeoutPromise]),
+          Promise.race([supabase.from('user_subscriptions').select('*').eq('user_id', currentUser.id).single(), timeoutPromise])
+        ]) as any
+        
+        setPlanInfo(planData)
+        setSubscription(subData)
+      } catch (e) {
+        console.warn('Subscription fetch failed, using fallback')
+        setPlanInfo({
+          planName: 'Free Trial',
+          planId: null,
+          status: 'trialing',
+          isActive: true,
+          videosRemaining: 5,
+          currentPeriodEnd: null
+        })
+        setSubscription(null)
+      }
     } catch (error: any) {
-      console.warn('Subscription service timeout, using fallback state:', error.message)
+      console.warn('User data fetch error:', error.message)
       
       // Set fallback plan info to allow basic functionality
       setPlanInfo({
@@ -100,13 +127,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Add timeout to auth initialization
-        const authTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 8000) // 8 second timeout
-        })
-        
-        const authPromise = supabase.auth.getUser()
-        const { data: { user: currentUser } } = await Promise.race([authPromise, authTimeout]) as any
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
         setUser(currentUser)
         
         if (currentUser) {
@@ -116,7 +137,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           setLoading(false)
         }
       } catch (error: any) {
-        console.warn('Auth service timeout, using fallback state:', error.message)
+        console.warn('Auth initialization error:', error.message)
         
         // Set fallback state on error
         setUser(null)
@@ -143,6 +164,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         } else {
           setPlanInfo(null)
           setSubscription(null)
+          setUserProfile(null)
           setLoading(false)
         }
       }
@@ -162,6 +184,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     <SubscriptionContext.Provider
       value={{
         user,
+        userProfile,
         planInfo,
         subscription,
         loading,

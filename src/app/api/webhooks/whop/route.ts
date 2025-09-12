@@ -78,15 +78,14 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleMembershipUpsert(supabase: any, membership: WhopMembership) {
+  console.log('Processing membership:', membership.id, 'for user:', membership.user_id)
+  
   const planInfo = PLAN_MAPPING[membership.access_pass.id] || {
     id: membership.access_pass.id,
     name: membership.access_pass.title
   }
 
-  // TODO: Implement proper user mapping from Whop user_id to your auth.users
-  // For now, you'll need to add this mapping logic
-  // You could store whop_user_id in user profiles or create a mapping table
-  
+  // Check if subscription already exists
   const { data: existingSubscription } = await supabase
     .from('user_subscriptions')
     .select('*')
@@ -101,12 +100,14 @@ async function handleMembershipUpsert(supabase: any, membership: WhopMembership)
 
   const subscriptionData = {
     whop_subscription_id: membership.id,
+    whop_user_id: membership.user_id,
     plan_id: planInfo.id,
     status: membership.status === 'past_due' ? 'expired' : membership.status,
     current_period_start: new Date(membership.current_period_start * 1000).toISOString(),
     current_period_end: new Date(membership.current_period_end * 1000).toISOString(),
     videos_limit: videosLimit,
-    videos_used: 0 // Reset usage on new period
+    videos_used: existingSubscription?.videos_used || 0,
+    updated_at: new Date().toISOString()
   }
 
   if (existingSubscription) {
@@ -117,22 +118,49 @@ async function handleMembershipUpsert(supabase: any, membership: WhopMembership)
       .eq('whop_subscription_id', membership.id)
 
     if (error) {
+      console.error('Failed to update subscription:', error)
       throw new Error(`Failed to update subscription: ${error.message}`)
     }
+    console.log('Updated existing subscription:', membership.id)
   } else {
-    // For new subscriptions, you need to map Whop user to your user
-    // This is a critical part you'll need to implement based on your user system
+    // For new subscriptions, try to find user by email or create mapping
+    let userId = null
     
-    // PLACEHOLDER: You need to implement this user mapping
-    console.warn('User mapping not implemented! Need to map Whop user_id:', membership.user_id)
-    
-    // Example approaches:
-    // 1. Store whop_user_id in user profiles during signup
-    // 2. Create a separate user mapping table  
-    // 3. Use email matching if available in webhook
-    
-    // For now, skip creating new subscriptions until mapping is implemented
-    console.log('Skipping new subscription creation - user mapping needed')
+    try {
+      // First, try to find user by whop_user_id if we have a mapping
+      const { data: userMapping } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('whop_user_id', membership.user_id)
+        .single()
+      
+      if (userMapping) {
+        userId = userMapping.id
+      } else {
+        // If no mapping exists, we'll need to create the subscription without a user_id
+        // and let the user claim it when they sign in by matching whop_user_id
+        console.log('No user mapping found for Whop user:', membership.user_id)
+      }
+    } catch (error: any) {
+      console.log('User mapping lookup failed:', error.message)
+    }
+
+    // Create new subscription (with or without user_id)
+    const newSubscriptionData = {
+      ...subscriptionData,
+      user_id: userId, // Will be null if no mapping found
+      created_at: new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('user_subscriptions')
+      .insert(newSubscriptionData)
+
+    if (error) {
+      console.error('Failed to create subscription:', error)
+      throw new Error(`Failed to create subscription: ${error.message}`)
+    }
+    console.log('Created new subscription:', membership.id, 'for user:', userId || 'unmapped')
   }
 }
 
