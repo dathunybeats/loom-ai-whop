@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -20,6 +20,20 @@ export default function NewProjectPage() {
   const [error, setError] = useState('')
   const [nameError, setNameError] = useState('')
   const router = useRouter()
+
+  // Lightweight auth state listener (middleware handles route protection)
+  useEffect(() => {
+    const supabase = createClient()
+
+    // Only listen for sign out events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        router.push('/login')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router])
 
   // Real-time validation for name
   const validateName = (value: string) => {
@@ -66,16 +80,27 @@ export default function NewProjectPage() {
     }
 
     try {
+      console.log('🚀 Starting project creation...')
       const supabase = createClient()
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('You must be logged in to create a project. Please refresh and try again.')
+      // Get user (middleware already ensures authentication)
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !user) {
+        console.error('❌ Auth error:', userError)
+        throw new Error('Please refresh the page and try again.')
       }
 
-      // Create project with trimmed values
-      const { data, error } = await supabase
+      console.log('✅ User authenticated:', user.id)
+
+      // Create project with timeout protection
+      console.log('📝 Creating project with data:', { 
+        name: trimmedName, 
+        description: description.trim() || null, 
+        user_id: user.id 
+      })
+      
+      const insertPromise = supabase
         .from('projects')
         .insert([
           {
@@ -87,18 +112,33 @@ export default function NewProjectPage() {
         .select()
         .single()
 
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Project creation timed out. Please try again.')), 10000)
+      )
+
+      const { data, error } = await Promise.race([insertPromise, timeoutPromise]) as any
+
       if (error) {
+        console.error('❌ Database error:', error)
         // Handle specific database errors
         if (error.code === '23505') {
           throw new Error('A project with this name already exists. Please choose a different name.')
         }
+        if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('RLS')) {
+          throw new Error('Permission denied. Please check your account status and try again.')
+        }
         throw new Error(`Failed to create project: ${error.message}`)
       }
 
-      // Redirect to project detail page
-      router.push(`/projects/${data.id}`)
+      console.log('✅ Project created successfully:', data)
+
+      // Small delay before redirect to ensure UI updates
+      setTimeout(() => {
+        router.push(`/projects/${data.id}`)
+      }, 500)
+      
     } catch (error: any) {
-      console.error('Error creating project:', error)
+      console.error('💥 Error creating project:', error)
       setError(error.message || 'An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
@@ -132,7 +172,7 @@ export default function NewProjectPage() {
           </p>
         </div>
 
-        <VideoCreationGuard feature="create new projects">
+        {/* <VideoCreationGuard feature="create new projects"> */}
           <div className="max-w-2xl space-y-8">
             {/* Main Form Card */}
             <Card>
@@ -245,7 +285,7 @@ export default function NewProjectPage() {
               </CardContent>
             </Card>
           </div>
-        </VideoCreationGuard>
+        {/* </VideoCreationGuard> */}
       </div>
     </DashboardLayout>
   )

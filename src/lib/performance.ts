@@ -5,7 +5,7 @@ export function measurePerformance(name: string, fn: () => void) {
     const start = performance.now()
     fn()
     const end = performance.now()
-    console.log(`[Performance] ${name}: ${end - start}ms`)
+    // Performance measured but not logged
   } else {
     fn()
   }
@@ -30,9 +30,7 @@ export function preloadRoute(href: string, priority: 'high' | 'low' = 'low') {
     
     document.head.appendChild(link)
     
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔗 Preloaded route: ${href} (${priority} priority)`)
-    }
+    // Route preloaded
   }
 }
 
@@ -52,9 +50,7 @@ export function clearPreloadCache() {
 }
 
 export function reportWebVitals(metric: any) {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[Web Vitals]', metric)
-  }
+  // Web vitals collected but not logged in development
   
   // Track critical performance metrics
   const { name, value, id } = metric

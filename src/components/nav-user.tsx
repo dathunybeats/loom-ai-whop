@@ -45,15 +45,44 @@ export function NavUser({
   const supabase = createClient()
 
   const handleLogout = async () => {
+    console.log('🔄 Starting logout process...')
+
+    // Create a timeout promise to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Logout timeout')), 5000)
+    })
+
     try {
-      await supabase.auth.signOut()
+      // Race the logout against a timeout
+      const { error } = await Promise.race([
+        supabase.auth.signOut(),
+        timeoutPromise
+      ]) as any
+
+      if (error) {
+        console.error('❌ Supabase logout error:', error)
+      } else {
+        console.log('✅ Supabase logout successful')
+      }
     } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      localStorage.clear()
-      sessionStorage.clear()
-      window.location.href = '/login'
+      console.error('❌ Logout error or timeout:', error)
+      // Continue with cleanup even if Supabase logout fails
     }
+
+    // Always perform cleanup and redirect regardless of Supabase success/failure
+    console.log('🧹 Clearing local storage and redirecting...')
+    localStorage.clear()
+    sessionStorage.clear()
+
+    // Clear any Supabase session cookies
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
+    })
+
+    console.log('🔀 Redirecting to login page...')
+    window.location.href = '/login'
   }
 
   return (
@@ -119,11 +148,11 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={(e) => {
+              onClick={async (e) => {
                 console.log('🖱️ DropdownMenuItem clicked!')
                 e.preventDefault()
                 e.stopPropagation()
-                handleLogout()
+                await handleLogout()
               }}
               className="cursor-pointer"
             >

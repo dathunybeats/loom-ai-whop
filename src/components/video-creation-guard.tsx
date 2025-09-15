@@ -14,6 +14,11 @@ interface VideoCreationGuardProps {
 }
 
 export function VideoCreationGuard({ children, feature = 'create videos' }: VideoCreationGuardProps) {
+  // IMMEDIATE: Bypass guard completely in development - no hooks needed
+  if (process.env.NODE_ENV === 'development') {
+    return <>{children}</>
+  }
+
   const { planInfo, loading, canCreateVideo } = useSubscription()
   const router = useRouter()
   const [fallbackLoading, setFallbackLoading] = useState(true)
@@ -28,10 +33,6 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
   }, [])
 
   if (loading && fallbackLoading) {
-    // In development, allow access after a short delay to avoid infinite loading
-    if (process.env.NODE_ENV === 'development') {
-      return <>{children}</>
-    }
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -39,8 +40,10 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
     )
   }
 
-  // Allow access if user can create videos OR if fallback triggered (graceful degradation)
-  if (canCreateVideo || (!loading && !fallbackLoading && !planInfo)) {
+  // Allow access in development or when user can create videos
+  if (canCreateVideo ||
+      (!loading && !fallbackLoading && planInfo?.isActive) ||
+      process.env.NODE_ENV === 'development') {
     return <>{children}</>
   }
 

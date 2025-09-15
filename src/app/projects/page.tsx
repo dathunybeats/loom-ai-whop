@@ -22,7 +22,7 @@ export default async function ProjectsPage() {
   // Fetch user's projects with optimized query
   const { data: projects, error } = await supabase
     .from('projects')
-    .select('id, name, description, base_video_url, voice_sample_url, prospects_count, videos_generated, created_at')
+    .select('id, name, description, base_video_url, voice_sample_url, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -80,22 +80,16 @@ export default async function ProjectsPage() {
 
         {/* Quick Stats (Simple, no complex analytics) */}
         {projects && projects.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t">
             <div className="text-center">
               <div className="text-2xl font-bold text-foreground">{projects.length}</div>
               <div className="text-sm text-muted-foreground">Total Projects</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-foreground">
-                {projects.reduce((sum, project) => sum + (project.prospects_count || 0), 0)}
+                {projects.filter(project => project.base_video_url).length}
               </div>
-              <div className="text-sm text-muted-foreground">Total Prospects</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-foreground">
-                {projects.reduce((sum, project) => sum + (project.videos_generated || 0), 0)}
-              </div>
-              <div className="text-sm text-muted-foreground">Videos Generated</div>
+              <div className="text-sm text-muted-foreground">Projects with Videos</div>
             </div>
           </div>
         )}

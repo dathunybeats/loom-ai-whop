@@ -104,7 +104,7 @@ export default async function Dashboard({
         </div>
 
         {/* Subscription Status Banner */}
-        <SubscriptionBanner />
+        {/* <SubscriptionBanner /> */}
 
         {/* Analytics Section */}
         <Suspense fallback={<DashboardStatsLoading />}>

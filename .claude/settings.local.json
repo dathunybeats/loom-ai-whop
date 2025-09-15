@@ -30,7 +30,10 @@
       "Bash(docker:*)",
       "Bash(dir:*)",
       "Bash(psql:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(mcp list-tools:*)",
+      "Bash(mcp list-resources:*)",
+      "Bash(env)"
     ],
     "deny": [],
     "ask": []

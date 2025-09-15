@@ -140,7 +140,10 @@ export default function ProjectPageClient({ project, user }: ProjectPageClientPr
                         }>
                           <VideoPlayer 
                             videoUrl={currentVideoUrl} 
-                            className="w-full h-full rounded-lg overflow-hidden" 
+                            className="w-full h-full rounded-lg overflow-hidden"
+                            projectId={project.id}
+                            projectName={project.name}
+                            showShare={true}
                           />
                         </Suspense>
                       </div>

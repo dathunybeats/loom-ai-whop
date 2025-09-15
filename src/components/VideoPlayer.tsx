@@ -11,7 +11,10 @@ import {
   SkipBack,
   SkipForward,
   RotateCcw,
-  Settings
+  Settings,
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
@@ -21,13 +24,19 @@ interface VideoPlayerProps {
   className?: string
   autoPlay?: boolean
   poster?: string
+  projectId?: string
+  projectName?: string
+  showShare?: boolean
 }
 
 export default function VideoPlayer({ 
   videoUrl, 
   className = '',
   autoPlay = false,
-  poster
+  poster,
+  projectId,
+  projectName,
+  showShare = false
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -38,6 +47,9 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [playbackRate, setPlaybackRate] = useState(1)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareUrl, setShareUrl] = useState('')
+  const [copySuccess, setCopySuccess] = useState(false)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -200,6 +212,55 @@ export default function VideoPlayer({
     if (!videoRef.current) return
     videoRef.current.playbackRate = rate
     setPlaybackRate(rate)
+  }
+
+  const handleShare = async () => {
+    if (!projectId) return
+    
+    try {
+      // Call API to enable sharing and get the share URL
+      const response = await fetch('/api/share-project', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectId })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to enable sharing')
+      }
+
+      const data = await response.json()
+      setShareUrl(data.shareUrl)
+      setShowShareModal(true)
+    } catch (error) {
+      console.error('Error creating share link:', error)
+      // Fallback to client-side URL generation if API fails
+      const baseUrl = window.location.origin
+      const shareUrl = `${baseUrl}/share/${projectId}`
+      setShareUrl(shareUrl)
+      setShowShareModal(true)
+    }
+  }
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = shareUrl
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    }
   }
 
   const restart = () => {
@@ -367,6 +428,13 @@ export default function VideoPlayer({
                 </Button>
               </div>
 
+              {/* Share */}
+              {showShare && projectId && (
+                <Button variant="ghost" size="sm" onClick={handleShare} className="p-1">
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              )}
+
               {/* Settings */}
               <Button variant="ghost" size="sm" onClick={() => {}} className="p-1">
                 <Settings className="w-4 h-4" />
@@ -380,6 +448,72 @@ export default function VideoPlayer({
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Share Video</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowShareModal(false)}
+                className="p-1 hover:bg-gray-100"
+              >
+                ×
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {projectName ? `Share "${projectName}"` : 'Share this video'}
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Anyone with this link will be able to view the video.
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={shareUrl}
+                  readOnly
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-mono"
+                />
+                <Button
+                  onClick={copyToClipboard}
+                  variant="outline"
+                  size="sm"
+                  className="px-3 py-2 flex items-center space-x-1"
+                >
+                  {copySuccess ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="text-green-600">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowShareModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

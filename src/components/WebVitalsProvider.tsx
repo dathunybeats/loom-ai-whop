@@ -22,9 +22,7 @@ export function WebVitalsProvider({ children }: { children: React.ReactNode }) {
             timeToFirstByte: navigationTiming.responseStart - navigationTiming.requestStart,
           }
           
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Navigation Timing]', metrics)
-          }
+          // Navigation timing metrics collected but not logged
         }
       })
 
@@ -32,9 +30,7 @@ export function WebVitalsProvider({ children }: { children: React.ReactNode }) {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'resource' && entry.duration > 1000) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn(`[Slow Resource] ${entry.name}: ${entry.duration}ms`)
-            }
+            // Slow resource detected but not logged
           }
         }
       })

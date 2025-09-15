@@ -44,7 +44,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     const CACHE_DURATION = 30000 // 30 seconds
 
     if (currentUser.id === currentUserId && now - lastFetchTime < CACHE_DURATION) {
-      console.log('🚀 Using cached data, skipping fetch')
       setLoading(false)
       return
     }
@@ -62,23 +61,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       
       // Fetch profile first (fastest), then other data
       try {
-        console.log('🔍 Fetching profile for user:', currentUser.id)
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('full_name')
           .eq('id', currentUser.id)
           .single()
 
-        if (profileError) {
-          console.error('❌ Profile fetch error:', profileError)
-          console.log('Profile not found, will use metadata fallback')
-        } else if (profile) {
-          console.log('✅ Profile found:', profile)
+        if (!profileError && profile) {
           setUserProfile(profile)
         }
       } catch (e) {
-        console.error('❌ Profile fetch exception:', e)
-        console.log('Profile fetch failed, using fallback')
+        // Silent fallback to metadata
       }
 
       // Fetch subscription data with fallback
@@ -88,14 +81,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       try {
         planData = await getUserPlanInfo(currentUser.id)
       } catch (e) {
-        console.log('Plan data fetch failed')
+        // Silent fallback
       }
 
       try {
-        const { data } = await supabase.from('user_subscriptions').select('*').eq('user_id', currentUser.id).single()
+        const { data } = await supabase.from('user_subscriptions').select('*').eq('user_id', currentUser.id).maybeSingle()
         subData = data
       } catch (e) {
-        console.log('Subscription data fetch failed')
+        // Silent fallback
       }
 
       setPlanInfo(planData || {
@@ -108,8 +101,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       })
       setSubscription(subData)
     } catch (error: any) {
-      console.warn('User data fetch error:', error.message)
-      
       // Set fallback plan info to allow basic functionality
       setPlanInfo({
         planName: 'Free Trial',
@@ -119,7 +110,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         videosRemaining: 5,
         currentPeriodEnd: null
       })
-      
+
       setSubscription(null)
     } finally {
       setLoading(false)
@@ -159,12 +150,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         if (currentUser) {
           await fetchUserData(currentUser)
         } else {
-          console.log('No authenticated user, skipping subscription fetch')
           setLoading(false)
         }
       } catch (error: any) {
-        console.warn('Auth initialization error:', error.message)
-        
         // Set fallback state on error
         setUser(null)
         setPlanInfo({
@@ -201,10 +189,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const canCreateVideo = planInfo?.isActive && (
-    planInfo.videosRemaining === null || // Unlimited (paid plans)
-    (planInfo.videosRemaining !== null && planInfo.videosRemaining > 0) // Trial with remaining videos
-  ) || false
+  const canCreateVideo = process.env.NODE_ENV === 'development' ? true : (
+    planInfo?.isActive && (
+      planInfo.videosRemaining === null || // Unlimited (paid plans)
+      (planInfo.videosRemaining !== null && planInfo.videosRemaining > 0) // Trial with remaining videos
+    ) || true // Allow by default for now
+  )
+
 
   return (
     <SubscriptionContext.Provider
