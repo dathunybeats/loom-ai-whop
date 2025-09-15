@@ -1,6 +1,15 @@
 import { Video } from "lucide-react"
 import Link from "next/link"
 import { LoginForm } from "@/components/login-form"
+import { Suspense } from "react"
+
+function LoginFormFallback() {
+  return (
+    <div className="flex items-center justify-center p-8">
+      <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+    </div>
+  )
+}
 
 export default function LoginPage() {
   return (
@@ -12,7 +21,9 @@ export default function LoginPage() {
           </div>
           Loom.ai
         </Link>
-        <LoginForm />
+        <Suspense fallback={<LoginFormFallback />}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   )

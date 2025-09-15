@@ -181,7 +181,7 @@ export default async function Dashboard({
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-foreground">Recent Campaigns</h2>
-                <Link href="/campaigns" className="text-sm text-primary hover:text-primary/80">
+                <Link href="/projects" className="text-sm text-primary hover:text-primary/80">
                   View all
                 </Link>
               </div>

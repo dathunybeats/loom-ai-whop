@@ -7,6 +7,8 @@ import {
   MoreVerticalIcon,
   UserCircleIcon,
 } from "lucide-react"
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 import {
   Avatar,
@@ -39,6 +41,20 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+  const supabase = createClient()
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.href = '/login'
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -102,7 +118,15 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                console.log('🖱️ DropdownMenuItem clicked!')
+                e.preventDefault()
+                e.stopPropagation()
+                handleLogout()
+              }}
+              className="cursor-pointer"
+            >
               <LogOutIcon />
               Log out
             </DropdownMenuItem>

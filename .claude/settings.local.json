@@ -23,7 +23,14 @@
       "Bash(PORT=3000 npm run dev)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "WebFetch(domain:dev.whop.com)"
+      "WebFetch(domain:dev.whop.com)",
+      "WebFetch(domain:help.whop.com)",
+      "Bash(git checkout:*)",
+      "Bash(supabase:*)",
+      "Bash(docker:*)",
+      "Bash(dir:*)",
+      "Bash(psql:*)",
+      "Bash(del nul)"
     ],
     "deny": [],
     "ask": []

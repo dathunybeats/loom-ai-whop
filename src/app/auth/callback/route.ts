@@ -30,6 +30,90 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Get the newly authenticated user
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        console.log('User authenticated:', user.id, user.email)
+
+        // Check if user already has a subscription
+        try {
+          const { data: existingSub } = await supabase
+            .from('user_subscriptions')
+            .select('*')
+            .eq('user_id', user.id)
+            .limit(1)
+
+          if (!existingSub || existingSub.length === 0) {
+            // Look for unlinked subscriptions that might belong to this user
+            const { data: unlinkedSubs } = await supabase
+              .from('user_subscriptions')
+              .select('*')
+              .is('user_id', null)
+              .limit(1)
+
+            if (unlinkedSubs && unlinkedSubs.length > 0) {
+              console.log('Found unlinked subscription, attempting to link...')
+
+              // Link the first unlinked subscription to this user
+              const { error: linkError } = await supabase
+                .from('user_subscriptions')
+                .update({ user_id: user.id })
+                .eq('id', unlinkedSubs[0].id)
+
+              if (!linkError) {
+                console.log('Successfully linked subscription to user')
+              } else {
+                console.error('Failed to link subscription:', linkError)
+              }
+            } else {
+              // No existing subscription and no unlinked subscription - create trial
+              console.log('Creating trial subscription for new user')
+
+              const trialEnd = new Date()
+              trialEnd.setDate(trialEnd.getDate() + 14) // 14 day trial
+
+              const { error: trialError } = await supabase
+                .from('user_subscriptions')
+                .insert({
+                  user_id: user.id,
+                  plan_id: 'trial',
+                  whop_subscription_id: null,
+                  status: 'trial',
+                  current_period_start: new Date().toISOString(),
+                  current_period_end: trialEnd.toISOString(),
+                  videos_limit: 5,
+                  videos_used: 0
+                })
+
+              if (trialError) {
+                console.error('Failed to create trial subscription:', trialError)
+              } else {
+                console.log('Successfully created trial subscription')
+              }
+            }
+          } else {
+            console.log('User already has a subscription')
+          }
+
+          // Create/update profile
+          try {
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: user.id,
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                email: user.email
+              }, { onConflict: 'id' })
+          } catch (e: any) {
+            console.warn('Profile creation failed:', e.message)
+          }
+
+        } catch (linkError) {
+          console.warn('Subscription setup failed:', linkError)
+        }
+      }
+
       // URL to redirect to after sign up process completes
       return NextResponse.redirect(`${origin}/dashboard`)
     }

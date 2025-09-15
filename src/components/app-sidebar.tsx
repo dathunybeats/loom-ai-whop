@@ -25,7 +25,6 @@ import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
-import { SubscriptionStatus } from "@/components/subscription-status"
 import {
   Sidebar,
   SidebarContent,
@@ -167,7 +166,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (user) {
       return {
         name: userProfile?.full_name || user.user_metadata?.full_name || "User",
-        email: user.email || "user@loom.ai", 
+        email: user.email || "user@loom.ai",
         avatar: user.user_metadata?.avatar_url || "",
       }
     }
@@ -197,7 +196,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <SubscriptionStatus />
         <NavUser user={displayUser} />
       </SidebarFooter>
     </Sidebar>

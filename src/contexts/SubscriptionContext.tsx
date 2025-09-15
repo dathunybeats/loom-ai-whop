@@ -33,54 +33,80 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null)
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const supabase = createClient()
 
   const fetchUserData = async (currentUser: User) => {
+    // Prevent redundant fetches for the same user within 30 seconds
+    const now = Date.now()
+    const CACHE_DURATION = 30000 // 30 seconds
+
+    if (currentUser.id === currentUserId && now - lastFetchTime < CACHE_DURATION) {
+      console.log('🚀 Using cached data, skipping fetch')
+      setLoading(false)
+      return
+    }
+
+    setCurrentUserId(currentUser.id)
+    setLastFetchTime(now)
+
     try {
       // First, immediately set profile data from user metadata if available
       if (currentUser.user_metadata?.full_name) {
         setUserProfile({ full_name: currentUser.user_metadata.full_name })
       }
 
-      // In development, use longer timeouts or no timeouts
-      const timeoutMs = process.env.NODE_ENV === 'development' ? 30000 : 10000
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Service timeout')), timeoutMs)
-      })
+      // Remove timeout promises - let queries complete naturally
       
       // Fetch profile first (fastest), then other data
       try {
-        const { data: profile } = await Promise.race([
-          supabase.from('profiles').select('full_name').eq('id', currentUser.id).single(),
-          timeoutPromise
-        ]) as any
-        if (profile) setUserProfile(profile)
+        console.log('🔍 Fetching profile for user:', currentUser.id)
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', currentUser.id)
+          .single()
+
+        if (profileError) {
+          console.error('❌ Profile fetch error:', profileError)
+          console.log('Profile not found, will use metadata fallback')
+        } else if (profile) {
+          console.log('✅ Profile found:', profile)
+          setUserProfile(profile)
+        }
       } catch (e) {
-        console.warn('Profile fetch failed, using fallback')
+        console.error('❌ Profile fetch exception:', e)
+        console.log('Profile fetch failed, using fallback')
       }
 
       // Fetch subscription data with fallback
+      let planData = null
+      let subData = null
+
       try {
-        const [planData, { data: subData }] = await Promise.all([
-          Promise.race([getUserPlanInfo(currentUser.id), timeoutPromise]),
-          Promise.race([supabase.from('user_subscriptions').select('*').eq('user_id', currentUser.id).single(), timeoutPromise])
-        ]) as any
-        
-        setPlanInfo(planData)
-        setSubscription(subData)
+        planData = await getUserPlanInfo(currentUser.id)
       } catch (e) {
-        console.warn('Subscription fetch failed, using fallback')
-        setPlanInfo({
-          planName: 'Free Trial',
-          planId: null,
-          status: 'trialing',
-          isActive: true,
-          videosRemaining: 5,
-          currentPeriodEnd: null
-        })
-        setSubscription(null)
+        console.log('Plan data fetch failed')
       }
+
+      try {
+        const { data } = await supabase.from('user_subscriptions').select('*').eq('user_id', currentUser.id).single()
+        subData = data
+      } catch (e) {
+        console.log('Subscription data fetch failed')
+      }
+
+      setPlanInfo(planData || {
+        planName: 'Free Trial',
+        planId: null,
+        status: 'trialing',
+        isActive: true,
+        videosRemaining: 5,
+        currentPeriodEnd: null
+      })
+      setSubscription(subData)
     } catch (error: any) {
       console.warn('User data fetch error:', error.message)
       

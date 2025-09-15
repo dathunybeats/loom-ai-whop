@@ -433,7 +433,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
 
         <TabsContent value="billing" className="space-y-6">
           <SubscriptionStatusCard />
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Billing Information</CardTitle>
