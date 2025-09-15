@@ -27,12 +27,11 @@ export interface VideoUsage {
 
 export async function getUserSubscription(userId: string): Promise<UserSubscription | null> {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('user_subscriptions')
     .select('*')
-    .eq('user_id', userId)
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error('Error fetching user subscription:', error)
@@ -45,15 +44,14 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
 export async function getCurrentMonthUsage(userId: string): Promise<VideoUsage | null> {
   const supabase = createClient()
   const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM format
-  
+
   const { data, error } = await supabase
     .from('video_usage')
     .select('*')
-    .eq('user_id', userId)
     .eq('month', currentMonth)
-    .single()
+    .maybeSingle()
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+  if (error) {
     console.error('Error fetching video usage:', error)
     return null
   }

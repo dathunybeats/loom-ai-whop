@@ -85,9 +85,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const { data } = await supabase.from('user_subscriptions').select('*').eq('user_id', currentUser.id).maybeSingle()
+        const { data } = await supabase.from('user_subscriptions').select('*').maybeSingle()
         subData = data
       } catch (e) {
+        console.error('Error fetching user subscription:', e)
         // Silent fallback
       }
 
