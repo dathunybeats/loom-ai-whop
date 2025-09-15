@@ -43,7 +43,7 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
   // Allow access in development or when user can create videos
   if (canCreateVideo ||
       (!loading && !fallbackLoading && planInfo?.isActive) ||
-      process.env.NODE_ENV === 'development') {
+      process.env.NODE_ENV !== 'production') {
     return <>{children}</>
   }
 
