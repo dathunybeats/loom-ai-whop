@@ -7,19 +7,30 @@ const DODO_BRAND_ID = process.env.DODO_BRAND_ID
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('Dodo checkout API called')
+
     if (!DODO_API_KEY) {
+      console.error('Missing DODO_API_KEY')
       return NextResponse.json({ error: 'Missing DODO_API_KEY' }, { status: 500 })
     }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
+      console.error('No authenticated user')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => ({})) as { planId?: string; metadata?: Record<string, string> }
+    const body = await req.json().catch((e) => {
+      console.error('JSON parse error:', e)
+      return {}
+    }) as { planId?: string; metadata?: Record<string, string> }
+
+    console.log('Request body:', body)
+
     const planId = body.planId
     if (!planId) {
+      console.error('Missing planId in request')
       return NextResponse.json({ error: 'Missing planId' }, { status: 400 })
     }
 
@@ -44,6 +55,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    console.log('Sending payload to Dodo:', payload)
+    console.log('Dodo API URL:', `${DODO_API_BASE}/checkouts`)
+
     const resp = await fetch(`${DODO_API_BASE}/checkouts`, {
       method: 'POST',
       headers: {
@@ -53,8 +67,17 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payload)
     })
 
-    const data = await resp.json().catch(() => ({}))
+    console.log('Dodo API response status:', resp.status)
+
+    const data = await resp.json().catch((e) => {
+      console.error('Failed to parse Dodo response as JSON:', e)
+      return {}
+    })
+
+    console.log('Dodo API response data:', data)
+
     if (!resp.ok) {
+      console.error('Dodo API error:', data)
       return NextResponse.json({
         error: data?.message || 'Failed to create checkout',
         details: data || null,
@@ -70,7 +93,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: checkoutUrl })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
+    console.error('Checkout API error:', e)
+    console.error('Error stack:', e?.stack)
+    return NextResponse.json({
+      error: e?.message || 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? e?.stack : undefined
+    }, { status: 500 })
   }
 }
 
