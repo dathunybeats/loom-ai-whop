@@ -24,15 +24,15 @@ export async function POST(req: NextRequest) {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    const successUrl = `${siteUrl}/dashboard?upgraded=true`
-    const cancelUrl = `${siteUrl}/dashboard`
+    // Dodo Checkout Sessions uses return_url per docs
+    const returnUrl = `${siteUrl}/dashboard?upgraded=true`
 
-    // Create unified checkout session (subscription)
+    // Create Checkout Session per docs: product_cart + return_url
     const payload: any = {
-      mode: 'subscription',
-      product_id: planId,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      product_cart: [
+        { product_id: planId, quantity: 1 }
+      ],
+      return_url: returnUrl,
       ...(DODO_BRAND_ID ? { brand_id: DODO_BRAND_ID } : {}),
       customer: {
         email: user.email,
@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
       }, { status: resp.status })
     }
 
-    // Expecting a url field for redirect
-    const checkoutUrl = data?.url || data?.checkout_url || data?.redirect_url
+    // Expecting checkout_url per docs
+    const checkoutUrl = data?.checkout_url || data?.url || data?.redirect_url
     if (!checkoutUrl) {
       return NextResponse.json({ error: 'Checkout URL missing in response' }, { status: 502 })
     }
