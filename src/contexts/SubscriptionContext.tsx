@@ -2,8 +2,48 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getUserPlanInfo, createUserTrial, UserSubscription } from '@/lib/whop'
 import { User } from '@supabase/supabase-js'
+
+// Dodo Payments plan configurations
+const PLAN_CONFIGS = {
+  'pdt_ScqkGM6dvih1xrlE04Lwo': { // Basic
+    name: 'Basic',
+    videos_limit: 100,
+    price: '$49.99'
+  },
+  'pdt_hixMn0obmlZ9vyr02Gmgi': { // Pro
+    name: 'Pro',
+    videos_limit: 500,
+    price: '$99'
+  },
+  'pdt_pyXVf4I6gL6TY4JkNmOCN': { // Agency
+    name: 'Agency',
+    videos_limit: -1, // Unlimited
+    price: '$199'
+  },
+  'trial': { // Trial
+    name: 'Trial',
+    videos_limit: 5,
+    price: 'Free'
+  }
+} as const
+
+interface UserSubscription {
+  id: string
+  user_id: string
+  plan_id: string
+  plan_name: string
+  status: 'active' | 'cancelled' | 'expired' | 'trial' | 'past_due'
+  current_period_start: string
+  current_period_end: string
+  videos_used: number
+  videos_limit: number
+  dodo_subscription_id?: string
+  dodo_customer_id?: string
+  billing_period: string
+  created_at: string
+  updated_at: string
+}
 
 interface PlanInfo {
   planName: string
@@ -11,7 +51,10 @@ interface PlanInfo {
   status: string
   isActive: boolean
   videosRemaining: number | null
+  videosUsed: number
+  videosLimit: number
   currentPeriodEnd: string | null
+  price: string
 }
 
 interface SubscriptionContextType {
@@ -22,7 +65,7 @@ interface SubscriptionContextType {
   loading: boolean
   canCreateVideo: boolean
   refreshSubscription: () => Promise<void>
-  startFreeTrial: () => Promise<boolean>
+  createTrialSubscription: () => Promise<boolean>
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
@@ -33,143 +76,116 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null)
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const supabase = createClient()
 
   const fetchUserData = async (currentUser: User) => {
-    console.log('SubscriptionContext: fetchUserData called for user:', currentUser.id)
-
-    // Temporarily disable caching for debugging
-    const now = Date.now()
-    // const CACHE_DURATION = 30000 // 30 seconds
-
-    // if (currentUser.id === currentUserId && now - lastFetchTime < CACHE_DURATION) {
-    //   console.log('SubscriptionContext: Skipping fetch due to cache', { currentUserId, lastFetchTime, now })
-    //   setLoading(false)
-    //   return
-    // }
-
-    setCurrentUserId(currentUser.id)
-    setLastFetchTime(now)
-
-    console.log('SubscriptionContext: Proceeding with data fetch...')
+    console.log('SubscriptionContext: Fetching user data for:', currentUser.id)
 
     try {
-      console.log('SubscriptionContext: Starting profile fetch...')
-      // First, immediately set profile data from user metadata if available
-      if (currentUser.user_metadata?.full_name) {
-        setUserProfile({ full_name: currentUser.user_metadata.full_name })
+      // Fetch user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single()
+
+      setUserProfile(profile)
+
+      // Fetch or create subscription
+      let { data: subscription, error } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .single()
+
+      // If no subscription exists, create a trial subscription
+      if (error || !subscription) {
+        console.log('No subscription found, creating trial subscription')
+        await createTrialSubscription()
+        return // createTrialSubscription will call fetchUserData again
       }
 
-      // Remove timeout promises - let queries complete naturally
+      setSubscription(subscription)
 
-      // Skip profile query for now - focus on subscription data
-      // try {
-      //   console.log('SubscriptionContext: Querying profiles table...')
-      //   const { data: profile, error: profileError } = await supabase
-      //     .from('profiles')
-      //     .select('full_name')
-      //     .eq('id', currentUser.id)
-      //     .single()
+      // Convert subscription to planInfo format
+      const planConfig = PLAN_CONFIGS[subscription.plan_id as keyof typeof PLAN_CONFIGS] || PLAN_CONFIGS.trial
 
-      //   console.log('SubscriptionContext: Profile query result:', profile, profileError)
-      //   if (!profileError && profile) {
-      //     setUserProfile(profile)
-      //   }
-      // } catch (e) {
-      //   console.error('SubscriptionContext: Profile fetch error:', e)
-      //   // Silent fallback to metadata
-      // }
+      const isActive = subscription.status === 'active' || subscription.status === 'trial'
+      const videosRemaining = subscription.videos_limit === -1 ? null :
+        Math.max(0, subscription.videos_limit - subscription.videos_used)
 
-      // Fetch subscription data with fallback
-      let planData = null
-      let subData = null
-
-      console.log('SubscriptionContext: Starting subscription queries...')
-
-      try {
-        console.log('SubscriptionContext: Calling getUserPlanInfo...')
-        planData = await getUserPlanInfo(currentUser.id)
-        console.log('SubscriptionContext: getUserPlanInfo result:', planData)
-      } catch (e) {
-        console.error('SubscriptionContext: getUserPlanInfo error:', e)
-        // Silent fallback
+      const planInfoData: PlanInfo = {
+        planName: subscription.plan_name || planConfig.name,
+        planId: subscription.plan_id,
+        status: subscription.status,
+        isActive,
+        videosRemaining,
+        videosUsed: subscription.videos_used,
+        videosLimit: subscription.videos_limit,
+        currentPeriodEnd: subscription.current_period_end,
+        price: planConfig.price
       }
 
-      try {
-        console.log('SubscriptionContext: Fetching user_subscriptions for user:', currentUser.id)
-        const { data } = await supabase.from('user_subscriptions').select('*').eq('user_id', currentUser.id).maybeSingle()
-        console.log('SubscriptionContext: Subscription query result:', data)
-        subData = data
+      setPlanInfo(planInfoData)
+      console.log('✅ Subscription data loaded:', planInfoData)
 
-        // If no subscription exists, create a trial automatically
-        if (!subData) {
-          console.log('No subscription found, creating trial for user:', currentUser.id)
-
-          const { data: newTrial, error: trialError } = await supabase
-            .from('user_subscriptions')
-            .insert({
-              user_id: currentUser.id,
-              plan_id: 'trial',
-              whop_subscription_id: null,
-              status: 'trial',
-              current_period_start: new Date().toISOString(),
-              current_period_end: new Date('2099-12-31').toISOString(),
-              videos_limit: 5,
-              videos_used: 0
-            })
-            .select()
-            .single()
-
-          if (!trialError && newTrial) {
-            console.log('Successfully created trial subscription:', newTrial)
-            subData = newTrial
-            // Refresh plan info with new subscription
-            planData = await getUserPlanInfo(currentUser.id)
-          } else {
-            console.error('Failed to create trial subscription:', trialError)
-          }
-        } else {
-          console.log('SubscriptionContext: Found existing subscription:', subData)
-        }
-      } catch (e) {
-        console.error('Error fetching user subscription:', e)
-        // Silent fallback
-      }
-
-      // Use planData from getUserPlanInfo if available, otherwise create fallback
-      const finalPlanInfo = planData || {
-        planName: 'Trial',
-        planId: 'trial',
-        status: 'trial',
-        isActive: true,
-        videosRemaining: 5,
-        currentPeriodEnd: null
-      }
-
-      console.log('SubscriptionContext: Setting final planInfo:', finalPlanInfo)
-      console.log('SubscriptionContext: Setting subscription data:', subData)
-
-      setPlanInfo(finalPlanInfo)
-      setSubscription(subData)
-    } catch (error: any) {
-      console.error('SubscriptionContext: Major error in fetchUserData:', error)
-      // Set fallback plan info to allow basic functionality
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+      // Set fallback trial state
       setPlanInfo({
         planName: 'Trial',
         planId: 'trial',
         status: 'trial',
         isActive: true,
         videosRemaining: 5,
-        currentPeriodEnd: null
+        videosUsed: 0,
+        videosLimit: 5,
+        currentPeriodEnd: null,
+        price: 'Free'
       })
-
-      setSubscription(null)
     } finally {
-      console.log('SubscriptionContext: fetchUserData completed, setting loading to false')
       setLoading(false)
+    }
+  }
+
+  const createTrialSubscription = async (): Promise<boolean> => {
+    if (!user) return false
+
+    try {
+      console.log('Creating trial subscription for user:', user.id)
+
+      const trialEnd = new Date()
+      trialEnd.setDate(trialEnd.getDate() + 7) // 7-day trial
+
+      const trialSubscription = {
+        user_id: user.id,
+        plan_id: 'trial',
+        plan_name: 'Trial',
+        status: 'trial' as const,
+        current_period_start: new Date().toISOString(),
+        current_period_end: trialEnd.toISOString(),
+        videos_used: 0,
+        videos_limit: 5,
+        billing_period: 'trial'
+      }
+
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .upsert(trialSubscription, { onConflict: 'user_id' })
+
+      if (error) {
+        console.error('Failed to create trial subscription:', error)
+        return false
+      }
+
+      console.log('✅ Trial subscription created')
+      await fetchUserData(user) // Refresh data
+      return true
+
+    } catch (error) {
+      console.error('Error creating trial subscription:', error)
+      return false
     }
   }
 
@@ -180,23 +196,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const startFreeTrial = async (): Promise<boolean> => {
-    if (!user) return false
-    
-    try {
-      const newSubscription = await createUserTrial(user.id)
-      if (newSubscription) {
-        setSubscription(newSubscription)
-        await refreshSubscription()
-        return true
-      }
-    } catch (error) {
-      console.error('Error starting free trial:', error)
-    }
-    
-    return false
-  }
-
+  // Initialize authentication and subscription data
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -212,7 +212,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           setLoading(false)
         }
       } catch (error: any) {
-        // Set fallback state on error
+        console.error('SubscriptionContext: Auth initialization error:', error)
         setUser(null)
         setPlanInfo({
           planName: 'Trial',
@@ -220,7 +220,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           status: 'trial',
           isActive: true,
           videosRemaining: 5,
-          currentPeriodEnd: null
+          videosUsed: 0,
+          videosLimit: 5,
+          currentPeriodEnd: null,
+          price: 'Free'
         })
         setLoading(false)
       }
@@ -228,16 +231,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     initializeAuth()
 
+    // Listen for auth changes
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('SubscriptionContext: Auth state changed:', event)
         setUser(session?.user || null)
-        
+
         if (session?.user) {
           await fetchUserData(session.user)
         } else {
+          setUserProfile(null)
           setPlanInfo(null)
           setSubscription(null)
-          setUserProfile(null)
           setLoading(false)
         }
       }
@@ -248,13 +253,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Calculate if user can create videos
   const canCreateVideo = process.env.NODE_ENV === 'development' ? true : (
     planInfo?.isActive && (
       planInfo.videosRemaining === null || // Unlimited (paid plans)
       (planInfo.videosRemaining !== null && planInfo.videosRemaining > 0) // Trial with remaining videos
     )
   ) ?? false
-
 
   return (
     <SubscriptionContext.Provider
@@ -266,7 +271,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         loading,
         canCreateVideo,
         refreshSubscription,
-        startFreeTrial
+        createTrialSubscription
       }}
     >
       {children}
