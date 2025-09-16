@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const DODO_API_BASE = process.env.DODO_API_BASE || 'https://api.dodopayments.com'
+const DODO_API_BASE = process.env.DODO_API_BASE || 'https://test.dodopayments.com'
 const DODO_API_KEY = process.env.DODO_API_KEY
 const DODO_BRAND_ID = process.env.DODO_BRAND_ID
 
@@ -35,24 +35,30 @@ export async function POST(req: NextRequest) {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    // Dodo Checkout Sessions uses return_url per docs
     const returnUrl = `${siteUrl}/dashboard?upgraded=true`
 
-    // Create Checkout Session per docs: product_cart + return_url
+    // Create Checkout Session per Dodo API docs
     const payload: any = {
       product_cart: [
-        { product_id: planId, quantity: 1 }
+        {
+          product_id: planId,
+          quantity: 1
+        }
       ],
-      return_url: returnUrl,
-      ...(DODO_BRAND_ID ? { brand_id: DODO_BRAND_ID } : {}),
       customer: {
         email: user.email,
-        name: user.user_metadata?.full_name || user.email?.split('@')[0] || undefined,
+        name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Customer',
       },
+      return_url: returnUrl,
       metadata: {
         user_id: user.id,
         ...(body.metadata || {})
       }
+    }
+
+    // Add brand_id if available
+    if (DODO_BRAND_ID) {
+      payload.brand_id = DODO_BRAND_ID
     }
 
     console.log('Sending payload to Dodo:', payload)
@@ -85,11 +91,18 @@ export async function POST(req: NextRequest) {
       }, { status: resp.status })
     }
 
-    // Expecting checkout_url per docs
-    const checkoutUrl = data?.checkout_url || data?.url || data?.redirect_url
+    // Extract checkout_url from response per Dodo API docs
+    const checkoutUrl = data?.checkout_url
     if (!checkoutUrl) {
-      return NextResponse.json({ error: 'Checkout URL missing in response' }, { status: 502 })
+      console.error('Missing checkout_url in Dodo response:', data)
+      return NextResponse.json({
+        error: 'Checkout URL missing in response',
+        response_data: data
+      }, { status: 502 })
     }
+
+    console.log('✓ Checkout session created successfully:', data.session_id)
+    console.log('✓ Checkout URL:', checkoutUrl)
 
     return NextResponse.json({ url: checkoutUrl })
   } catch (e: any) {

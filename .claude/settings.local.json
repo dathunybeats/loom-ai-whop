@@ -36,7 +36,8 @@
       "Bash(env)",
       "Bash(npm test:*)",
       "Bash(copy:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "WebFetch(domain:docs.dodopayments.com)"
     ],
     "deny": [],
     "ask": []
