@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 const DODO_API_BASE = process.env.DODO_API_BASE || 'https://api.dodopayments.com'
 const DODO_API_KEY = process.env.DODO_API_KEY
+const DODO_BRAND_ID = process.env.DODO_BRAND_ID
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,8 +33,10 @@ export async function POST(req: NextRequest) {
       product_id: planId,
       success_url: successUrl,
       cancel_url: cancelUrl,
+      ...(DODO_BRAND_ID ? { brand_id: DODO_BRAND_ID } : {}),
       customer: {
         email: user.email,
+        name: user.user_metadata?.full_name || user.email?.split('@')[0] || undefined,
       },
       metadata: {
         user_id: user.id,
@@ -52,7 +55,11 @@ export async function POST(req: NextRequest) {
 
     const data = await resp.json().catch(() => ({}))
     if (!resp.ok) {
-      return NextResponse.json({ error: data?.message || 'Failed to create checkout' }, { status: resp.status })
+      return NextResponse.json({
+        error: data?.message || 'Failed to create checkout',
+        details: data || null,
+        status: resp.status
+      }, { status: resp.status })
     }
 
     // Expecting a url field for redirect
