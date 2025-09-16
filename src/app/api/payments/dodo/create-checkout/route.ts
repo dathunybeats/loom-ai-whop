@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({
-        error: data?.message || `Dodo API error (${resp.status})`,
+        error: (data as any)?.message || `Dodo API error (${resp.status})`,
         details: data || { raw_response: rawResponse },
         status: resp.status,
         debug_info: {
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Extract checkout_url from response per Dodo API docs
-    const checkoutUrl = data?.checkout_url
+    const checkoutUrl = (data as any)?.checkout_url
     if (!checkoutUrl) {
       console.error('Missing checkout_url in Dodo response:', data)
       return NextResponse.json({
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       }, { status: 502 })
     }
 
-    console.log('✓ Checkout session created successfully:', data.session_id)
+    console.log('✓ Checkout session created successfully:', (data as any).session_id)
     console.log('✓ Checkout URL:', checkoutUrl)
 
     return NextResponse.json({ url: checkoutUrl })
