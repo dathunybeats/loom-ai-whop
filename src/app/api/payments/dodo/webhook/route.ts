@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+
+// Create service role client for webhook operations
+function createServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+}
 
 // Plan configurations for Dodo Payments
 const PLAN_CONFIGS = {
@@ -43,7 +56,7 @@ export async function POST(req: NextRequest) {
   console.log('📋 Event:', event)
 
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // Handle different Dodo payment events
     const eventType = event?.type || event?.event_type
@@ -79,7 +92,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handleSuccessfulPayment(supabase: any, data: any) {
+async function handleSuccessfulPayment(supabase: ReturnType<typeof createServiceClient>, data: any) {
   console.log('✅ Processing successful payment')
 
   // Extract user information
@@ -158,7 +171,7 @@ async function handleSuccessfulPayment(supabase: any, data: any) {
   console.log('✅ Subscription updated successfully')
 }
 
-async function handleCancelledSubscription(supabase: any, data: any) {
+async function handleCancelledSubscription(supabase: ReturnType<typeof createServiceClient>, data: any) {
   console.log('🚫 Processing cancelled subscription')
 
   const userId = data?.metadata?.user_id
@@ -186,7 +199,7 @@ async function handleCancelledSubscription(supabase: any, data: any) {
   console.log('✅ Subscription cancelled successfully')
 }
 
-async function handleFailedPayment(supabase: any, data: any) {
+async function handleFailedPayment(supabase: ReturnType<typeof createServiceClient>, data: any) {
   console.log('❌ Processing failed payment')
 
   const userId = data?.metadata?.user_id
