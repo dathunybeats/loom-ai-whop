@@ -17,31 +17,59 @@ export async function POST(req: NextRequest) {
   }
   if (!event) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
 
-  // Basic signature verification (v1,<base64>) using HMAC-SHA256 of `${timestamp}.${raw}`
+  // Enhanced signature verification with debug logging
   // If secret not set, skip verification (dev convenience)
   if (secret) {
     const sigHeader = req.headers.get('webhook-signature') || ''
     const ts = req.headers.get('webhook-timestamp') || ''
+
+    console.log('Webhook signature verification:')
+    console.log('- Signature header:', sigHeader)
+    console.log('- Timestamp:', ts)
+    console.log('- Raw body length:', raw.length)
+
     const parts = sigHeader.split(',')
     const v1 = parts.length === 2 && parts[0] === 'v1' ? parts[1] : ''
+
+    if (!v1) {
+      console.error('Invalid signature format - missing v1 signature')
+      return NextResponse.json({ error: 'Invalid signature format' }, { status: 400 })
+    }
+
     try {
       const payloadToSign = `${ts}.${raw}`
+      console.log('- Payload to sign:', payloadToSign.substring(0, 100) + '...')
+
       const computed = crypto.createHmac('sha256', secret).update(payloadToSign).digest('base64')
-      if (!v1 || !crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(computed))) {
+      console.log('- Computed signature:', computed)
+      console.log('- Expected signature:', v1)
+
+      if (!crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(computed))) {
+        console.error('Signature mismatch')
         return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
       }
-    } catch {
+
+      console.log('✓ Signature verification passed')
+    } catch (e) {
+      console.error('Signature verification error:', e)
       return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 })
     }
+  } else {
+    console.warn('Webhook secret not configured - skipping signature verification')
   }
 
   try {
+    console.log('Processing webhook event:', event)
+
     const supabase = await createClient()
 
     // Basic intents (adjust to Dodo events):
     // payment.succeeded, subscription.created, subscription.renewed, subscription.canceled
     const type = event?.type || event?.event
     const data = event?.data || event
+
+    console.log('Event type:', type)
+    console.log('Event data:', data)
 
     if (type?.startsWith('subscription')) {
       const customerEmail: string | undefined = data?.customer?.email || data?.customer_email
