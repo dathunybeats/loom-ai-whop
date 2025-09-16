@@ -1,30 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { whopWebhookSchema, type WhopWebhookPayload, type WhopMembership } from '@/lib/validations'
+import { z } from 'zod'
 
 const WHOP_WEBHOOK_SECRET = process.env.WHOP_WEBHOOK_SECRET
-
-interface WhopMembership {
-  id: string
-  user_id: string
-  access_pass: {
-    id: string
-    title: string
-  }
-  status: 'active' | 'cancelled' | 'expired' | 'past_due'
-  cancel_at_period_end: boolean
-  current_period_start: number
-  current_period_end: number
-  trial_start?: number
-  trial_end?: number
-}
-
-interface WhopWebhookPayload {
-  type: string
-  data: {
-    membership: WhopMembership
-  }
-}
 
 const PLAN_MAPPING: Record<string, { id: string; name: string }> = {
   'plan_TfXAKUpmBXIMA': { id: 'plan_TfXAKUpmBXIMA', name: 'Basic' },
@@ -44,28 +25,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
-    const payload: WhopWebhookPayload = JSON.parse(body)
+    // Parse and validate webhook payload
+    let payload: WhopWebhookPayload
+    try {
+      const rawPayload = JSON.parse(body)
+      payload = whopWebhookSchema.parse(rawPayload)
+    } catch (error) {
+      console.error('Invalid webhook payload:', error)
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+        return NextResponse.json({ error: `Validation failed: ${errorMessage}` }, { status: 400 })
+      }
+      return NextResponse.json({ error: 'Invalid payload format' }, { status: 400 })
+    }
+
     const { type, data } = payload
     const { membership } = data
 
     console.log('Whop webhook received:', type, membership.id)
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     switch (type) {
       case 'payment_succeeded':
       case 'membership_went_valid':
         await handleMembershipUpsert(supabase, membership)
         break
-      
+
       case 'membership_cancel_at_period_end_changed':
         await handleMembershipCancellation(supabase, membership)
         break
-      
+
       case 'membership_went_invalid':
         await handleMembershipExpiry(supabase, membership)
         break
-      
+
       case 'refund_created':
         await handleRefund(supabase, membership)
         break
@@ -81,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleMembershipUpsert(supabase: any, membership: WhopMembership) {
+async function handleMembershipUpsert(supabase: SupabaseClient, membership: WhopMembership) {
   console.log('Processing membership:', membership.id, 'for user:', membership.user_id)
   
   const planInfo = PLAN_MAPPING[membership.access_pass.id] || {
@@ -145,8 +139,9 @@ async function handleMembershipUpsert(supabase: any, membership: WhopMembership)
         // and let the user claim it when they sign in by matching whop_user_id
         console.log('No user mapping found for Whop user:', membership.user_id)
       }
-    } catch (error: any) {
-      console.log('User mapping lookup failed:', error.message)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.log('User mapping lookup failed:', errorMessage)
     }
 
     // Create new subscription (with or without user_id)
@@ -168,7 +163,7 @@ async function handleMembershipUpsert(supabase: any, membership: WhopMembership)
   }
 }
 
-async function handleMembershipCancellation(supabase: any, membership: WhopMembership) {
+async function handleMembershipCancellation(supabase: SupabaseClient, membership: WhopMembership) {
   const { error } = await supabase
     .from('user_subscriptions')
     .update({ 
@@ -181,7 +176,7 @@ async function handleMembershipCancellation(supabase: any, membership: WhopMembe
   }
 }
 
-async function handleMembershipExpiry(supabase: any, membership: WhopMembership) {
+async function handleMembershipExpiry(supabase: SupabaseClient, membership: WhopMembership) {
   const { error } = await supabase
     .from('user_subscriptions')
     .update({ 
@@ -197,7 +192,7 @@ async function handleMembershipExpiry(supabase: any, membership: WhopMembership)
   console.log('Expired subscription:', membership.id)
 }
 
-async function handleRefund(supabase: any, membership: WhopMembership) {
+async function handleRefund(supabase: SupabaseClient, membership: WhopMembership) {
   // When a refund is created, we should expire the subscription
   const { error } = await supabase
     .from('user_subscriptions')
@@ -215,14 +210,14 @@ async function handleRefund(supabase: any, membership: WhopMembership) {
 }
 
 // Placeholder for webhook signature verification
-function verifyWebhookSignature(body: string, signature: string | null, secret: string): boolean {
+function verifyWebhookSignature(body: string, signature: string | null, _secret: string): boolean {
   // Implement based on Whop's webhook signature verification
   // This is a placeholder - check Whop's documentation for the exact implementation
   if (!signature) return false
-  
+
   // Example implementation (adjust based on Whop's actual method):
   // const expectedSignature = crypto.createHmac('sha256', secret).update(body).digest('hex')
   // return signature === expectedSignature
-  
+
   return true // Temporarily return true for development
 }

@@ -14,11 +14,7 @@ interface VideoCreationGuardProps {
 }
 
 export function VideoCreationGuard({ children, feature = 'create videos' }: VideoCreationGuardProps) {
-  // IMMEDIATE: Bypass guard completely in development - no hooks needed
-  if (process.env.NODE_ENV === 'development') {
-    return <>{children}</>
-  }
-
+  // Always call hooks at the top level
   const { planInfo, loading, canCreateVideo } = useSubscription()
   const router = useRouter()
   const [fallbackLoading, setFallbackLoading] = useState(true)
@@ -31,6 +27,11 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
 
     return () => clearTimeout(fallbackTimer)
   }, [])
+
+  // IMMEDIATE: Bypass guard completely in development - after hooks are called
+  if (process.env.NODE_ENV === 'development') {
+    return <>{children}</>
+  }
 
   if (loading && fallbackLoading) {
     return (

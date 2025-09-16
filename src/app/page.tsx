@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Check, ChevronDown, Star, ArrowRight, Play, Shield, Zap, Target, Users, TrendingUp, Clock } from 'lucide-react'
 import { PricingPlans } from '@/components/pricing-plans'
 
@@ -211,7 +210,7 @@ export default async function Home() {
                 Upload Base Video
               </h3>
               <p className="text-muted-foreground">
-                Record a talking head video with "[FIRST_NAME]" placeholder that AI will personalize for each prospect.
+                Record a talking head video with &ldquo;[FIRST_NAME]&rdquo; placeholder that AI will personalize for each prospect.
               </p>
             </div>
             <div className="text-center">
@@ -257,7 +256,7 @@ export default async function Home() {
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  "Loom.ai increased our cold outreach response rate by 400%. The personalization is incredible."
+                  &ldquo;Loom.ai increased our cold outreach response rate by 400%. The personalization is incredible.&rdquo;
                 </p>
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-primary rounded-full mr-3" />
@@ -276,7 +275,7 @@ export default async function Home() {
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  "We saved 20 hours per week on video creation while tripling our conversion rates."
+                  &ldquo;We saved 20 hours per week on video creation while tripling our conversion rates.&rdquo;
                 </p>
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-primary rounded-full mr-3" />
@@ -295,7 +294,7 @@ export default async function Home() {
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  "The AI personalization is so natural, prospects think we made individual videos for them."
+                  &ldquo;The AI personalization is so natural, prospects think we made individual videos for them.&rdquo;
                 </p>
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-primary rounded-full mr-3" />
@@ -397,7 +396,7 @@ export default async function Home() {
               </summary>
               <div className="px-6 pb-6">
                 <p className="text-muted-foreground">
-                  Upload a base video with placeholder text like "[FIRST_NAME]". Our AI replaces these placeholders with actual prospect names and generates unique videos for each person in your list.
+                  Upload a base video with placeholder text like &ldquo;[FIRST_NAME]&rdquo;. Our AI replaces these placeholders with actual prospect names and generates unique videos for each person in your list.
                 </p>
               </div>
             </details>

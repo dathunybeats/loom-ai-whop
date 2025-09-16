@@ -105,8 +105,9 @@ export async function GET(request: NextRequest) {
                 full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                 email: user.email
               }, { onConflict: 'id' })
-          } catch (e: any) {
-            console.warn('Profile creation failed:', e.message)
+          } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : 'Unknown error'
+            console.warn('Profile creation failed:', errorMessage)
           }
 
         } catch (linkError) {

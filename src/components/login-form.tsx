@@ -16,6 +16,8 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
+import { loginSchema } from '@/lib/validations'
+import { z } from 'zod'
 
 export function LoginForm({
   className,
@@ -26,6 +28,7 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -56,21 +59,49 @@ export function LoginForm({
     e.preventDefault()
     setLoading(true)
     setError('')
+    setFieldErrors({})
 
     try {
+      // Validate form data
+      const validatedData = loginSchema.parse({ email, password })
+
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: validatedData.email,
+        password: validatedData.password,
       })
 
       if (error) {
-        setError(error.message)
+        // Provide more specific error messages
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.')
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Please check your email and click the confirmation link before signing in.')
+        } else if (error.message.includes('Too many requests')) {
+          setError('Too many sign-in attempts. Please wait a few minutes before trying again.')
+        } else {
+          setError(error.message)
+        }
+        console.error('Supabase login error:', error)
       } else {
         router.push('/dashboard')
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      if (err instanceof z.ZodError) {
+        // Handle validation errors
+        const errors: { email?: string; password?: string } = {}
+        err.issues.forEach((error) => {
+          if (error.path[0] === 'email') {
+            errors.email = error.message
+          } else if (error.path[0] === 'password') {
+            errors.password = error.message
+          }
+        })
+        setFieldErrors(errors)
+      } else {
+        console.error('Login error:', err)
+        setError('An unexpected error occurred. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -153,7 +184,11 @@ export function LoginForm({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className={fieldErrors.email ? 'border-red-500' : ''}
                   />
+                  {fieldErrors.email && (
+                    <p className="text-sm text-red-600">{fieldErrors.email}</p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <div className="flex items-center">
@@ -172,7 +207,7 @@ export function LoginForm({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="pr-10"
+                      className={`pr-10 ${fieldErrors.password ? 'border-red-500' : ''}`}
                     />
                     <button
                       type="button"
@@ -187,6 +222,9 @@ export function LoginForm({
                       )}
                     </button>
                   </div>
+                  {fieldErrors.password && (
+                    <p className="text-sm text-red-600">{fieldErrors.password}</p>
+                  )}
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Signing in...' : 'Sign In'}

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { VideoCreationGuard } from '@/components/video-creation-guard'
 import { DashboardLayout } from '@/components/dashboard-layout'
@@ -20,20 +20,33 @@ export default function NewProjectPage() {
   const [error, setError] = useState('')
   const [nameError, setNameError] = useState('')
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
 
-  // Lightweight auth state listener (middleware handles route protection)
+  // Redirect if not authenticated
   useEffect(() => {
-    const supabase = createClient()
+    if (!authLoading && !user) {
+      router.push('/login')
+    }
+  }, [user, authLoading, router])
 
-    // Only listen for sign out events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        router.push('/login')
-      }
-    })
+  // Show loading spinner while auth is being checked
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
-    return () => subscription.unsubscribe()
-  }, [router])
+  // Don't render if user is not authenticated (will redirect)
+  if (!user) {
+    return null
+  }
 
   // Real-time validation for name
   const validateName = (value: string) => {
@@ -81,61 +94,39 @@ export default function NewProjectPage() {
 
     try {
       console.log('🚀 Starting project creation...')
-      const supabase = createClient()
-      
-      // Get user (middleware already ensures authentication)
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError || !user) {
-        console.error('❌ Auth error:', userError)
-        throw new Error('Please refresh the page and try again.')
-      }
 
-      console.log('✅ User authenticated:', user.id)
-
-      // Create project with timeout protection
-      console.log('📝 Creating project with data:', { 
-        name: trimmedName, 
-        description: description.trim() || null, 
-        user_id: user.id 
+      // Use API route instead of direct Supabase call to avoid client-side auth issues
+      console.log('📡 Calling project creation API...')
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: trimmedName,
+          description: description.trim() || null,
+        }),
       })
-      
-      const insertPromise = supabase
-        .from('projects')
-        .insert([
-          {
-            name: trimmedName,
-            description: description.trim() || null,
-            user_id: user.id
-          }
-        ])
-        .select()
-        .single()
 
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Project creation timed out. Please try again.')), 10000)
-      )
+      console.log('✅ API call completed, status:', response.status)
 
-      const { data, error } = await Promise.race([insertPromise, timeoutPromise]) as any
+      const result = await response.json()
+      console.log('📋 API response:', result)
 
-      if (error) {
-        console.error('❌ Database error:', error)
-        // Handle specific database errors
-        if (error.code === '23505') {
-          throw new Error('A project with this name already exists. Please choose a different name.')
-        }
-        if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('RLS')) {
-          throw new Error('Permission denied. Please check your account status and try again.')
-        }
-        throw new Error(`Failed to create project: ${error.message}`)
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create project')
       }
 
-      console.log('✅ Project created successfully:', data)
+      console.log('✅ Project created successfully:', result.project)
 
-      // Small delay before redirect to ensure UI updates
-      setTimeout(() => {
-        router.push(`/projects/${data.id}`)
-      }, 500)
+      // Reset form state before redirect
+      setName('')
+      setDescription('')
+      setError('')
+      setNameError('')
+
+      // Navigate to the new project
+      router.push(`/projects/${result.project.id}`)
       
     } catch (error: any) {
       console.error('💥 Error creating project:', error)

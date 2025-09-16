@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { ProjectCard } from '@/components/project-card'
-import { SubscriptionBanner } from '@/components/subscription-banner'
 import { Suspense } from 'react'
 import { DashboardStatsLoading, ProjectsGridLoading, RecentCampaignsLoading } from '@/components/ui/loading-skeleton'
 

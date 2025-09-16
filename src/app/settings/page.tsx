@@ -16,12 +16,19 @@ export default async function SettingsPage() {
     redirect('/login')
   }
 
-  // Fetch user profile data
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  // Fetch user profile data via server-side call
+  let profile = null
+  try {
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    profile = profileData
+  } catch (error) {
+    console.error('Error fetching profile:', error)
+    // Profile will be null and SettingsPageClient will handle it
+  }
 
   return (
     <DashboardLayout>

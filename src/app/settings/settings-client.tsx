@@ -59,22 +59,72 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
 
   const supabase = createClient()
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setLoading(true)
+    try {
+      console.log('🚀 Starting avatar upload...')
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload-avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      console.log('✅ API call completed, status:', response.status)
+
+      const result = await response.json()
+      console.log('📋 API response:', result)
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to upload avatar')
+      }
+
+      console.log('✅ Avatar uploaded successfully:', result.avatar_url)
+
+      // Update local state with new avatar URL
+      setProfileData({ ...profileData, avatar_url: result.avatar_url })
+
+      toast.success('Profile photo updated successfully')
+    } catch (error: any) {
+      console.error('💥 Error uploading avatar:', error)
+      toast.error(error.message || 'Failed to upload photo. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleProfileUpdate = async () => {
     setLoading(true)
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          ...profileData,
-          updated_at: new Date().toISOString()
-        })
+      console.log('🚀 Starting profile update...')
 
-      if (error) throw error
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profileData),
+      })
 
+      console.log('✅ API call completed, status:', response.status)
+
+      const result = await response.json()
+      console.log('📋 API response:', result)
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update profile')
+      }
+
+      console.log('✅ Profile updated successfully:', result.profile)
       toast.success('Profile updated successfully')
     } catch (error: any) {
-      toast.error(error.message)
+      console.error('💥 Error updating profile:', error)
+      toast.error(error.message || 'An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -83,19 +133,30 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
   const handlePreferencesUpdate = async () => {
     setLoading(true)
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          ...preferences,
-          updated_at: new Date().toISOString()
-        })
+      console.log('🚀 Starting preferences update...')
 
-      if (error) throw error
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(preferences),
+      })
 
+      console.log('✅ API call completed, status:', response.status)
+
+      const result = await response.json()
+      console.log('📋 API response:', result)
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update preferences')
+      }
+
+      console.log('✅ Preferences updated successfully:', result.profile)
       toast.success('Preferences updated successfully')
     } catch (error: any) {
-      toast.error(error.message)
+      console.error('💥 Error updating preferences:', error)
+      toast.error(error.message || 'An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -203,10 +264,27 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                     {profileData.first_name?.[0]}{profileData.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
-                <Button variant="outline" size="sm">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Change Photo
-                </Button>
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    id="avatar-upload"
+                    disabled={loading}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    disabled={loading}
+                  >
+                    <label htmlFor="avatar-upload" className="cursor-pointer">
+                      <Camera className="w-4 h-4 mr-2" />
+                      {loading ? 'Uploading...' : 'Change Photo'}
+                    </label>
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

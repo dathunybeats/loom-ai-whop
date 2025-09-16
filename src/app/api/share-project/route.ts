@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       isShared: true
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Share project API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

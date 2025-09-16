@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { videoFileSchema, uuidSchema } from '@/lib/validations'
+import { z } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,9 +12,41 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
     const projectId = formData.get('projectId') as string
 
+    // Validate inputs
     if (!file || !projectId) {
       return NextResponse.json(
         { error: 'Missing file or projectId' },
+        { status: 400 }
+      )
+    }
+
+    // Validate project ID format
+    try {
+      uuidSchema.parse(projectId)
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid project ID format' },
+        { status: 400 }
+      )
+    }
+
+    // Validate file
+    try {
+      videoFileSchema.parse({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map(err => err.message).join(', ')
+        return NextResponse.json(
+          { error: `File validation failed: ${errorMessage}` },
+          { status: 400 }
+        )
+      }
+      return NextResponse.json(
+        { error: 'File validation failed' },
         { status: 400 }
       )
     }
@@ -93,10 +127,11 @@ export async function POST(request: NextRequest) {
       message: 'Video uploaded successfully'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('💥 Upload API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return NextResponse.json(
-      { error: `Upload failed: ${error.message}` },
+      { error: `Upload failed: ${errorMessage}` },
       { status: 500 }
     )
   }

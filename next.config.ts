@@ -1,12 +1,13 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from '@next/bundle-analyzer';
 
 // Bundle analyzer setup
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
+const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
 const nextConfig: NextConfig = {
-  // Disable ESLint during builds for deployment
+  // Temporarily disable ESLint during builds to fix critical issues first
   eslint: {
     ignoreDuringBuilds: true,
   },
