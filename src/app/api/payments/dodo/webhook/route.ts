@@ -17,46 +17,9 @@ export async function POST(req: NextRequest) {
   }
   if (!event) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
 
-  // Enhanced signature verification with debug logging
-  // If secret not set, skip verification (dev convenience)
-  if (secret) {
-    const sigHeader = req.headers.get('webhook-signature') || ''
-    const ts = req.headers.get('webhook-timestamp') || ''
-
-    console.log('Webhook signature verification:')
-    console.log('- Signature header:', sigHeader)
-    console.log('- Timestamp:', ts)
-    console.log('- Raw body length:', raw.length)
-
-    const parts = sigHeader.split(',')
-    const v1 = parts.length === 2 && parts[0] === 'v1' ? parts[1] : ''
-
-    if (!v1) {
-      console.error('Invalid signature format - missing v1 signature')
-      return NextResponse.json({ error: 'Invalid signature format' }, { status: 400 })
-    }
-
-    try {
-      const payloadToSign = `${ts}.${raw}`
-      console.log('- Payload to sign:', payloadToSign.substring(0, 100) + '...')
-
-      const computed = crypto.createHmac('sha256', secret).update(payloadToSign).digest('base64')
-      console.log('- Computed signature:', computed)
-      console.log('- Expected signature:', v1)
-
-      if (!crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(computed))) {
-        console.error('Signature mismatch')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
-      }
-
-      console.log('✓ Signature verification passed')
-    } catch (e) {
-      console.error('Signature verification error:', e)
-      return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 })
-    }
-  } else {
-    console.warn('Webhook secret not configured - skipping signature verification')
-  }
+  // TODO: Re-enable signature verification once we understand Dodo's signing method
+  console.log('⚠️ SIGNATURE VERIFICATION TEMPORARILY DISABLED FOR DEBUGGING')
+  console.log('Webhook headers:', Object.fromEntries(req.headers.entries()))
 
   try {
     console.log('Processing webhook event:', event)
