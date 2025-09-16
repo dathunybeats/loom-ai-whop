@@ -74,20 +74,47 @@ export async function POST(req: NextRequest) {
     })
 
     console.log('Dodo API response status:', resp.status)
+    console.log('Dodo API response headers:', Object.fromEntries(resp.headers.entries()))
 
-    const data = await resp.json().catch((e) => {
-      console.error('Failed to parse Dodo response as JSON:', e)
-      return {}
-    })
+    // Get raw response text first for better debugging
+    const rawResponse = await resp.text()
+    console.log('Dodo API raw response:', rawResponse)
 
-    console.log('Dodo API response data:', data)
+    let data = {}
+    if (rawResponse) {
+      try {
+        data = JSON.parse(rawResponse)
+        console.log('Dodo API parsed response:', data)
+      } catch (e) {
+        console.error('Failed to parse Dodo response as JSON:', e)
+        console.error('Raw response was:', rawResponse)
+        return NextResponse.json({
+          error: 'Invalid JSON response from Dodo API',
+          raw_response: rawResponse,
+          status: resp.status
+        }, { status: 502 })
+      }
+    }
 
     if (!resp.ok) {
-      console.error('Dodo API error:', data)
+      console.error('Dodo API error - Status:', resp.status)
+      console.error('Dodo API error - Data:', data)
+
+      // Special handling for 401 errors
+      if (resp.status === 401) {
+        console.error('🚨 AUTHENTICATION FAILED - Check your DODO_API_KEY')
+        console.error('Current API key prefix:', DODO_API_KEY ? DODO_API_KEY.substring(0, 10) + '...' : 'NOT SET')
+      }
+
       return NextResponse.json({
-        error: data?.message || 'Failed to create checkout',
-        details: data || null,
-        status: resp.status
+        error: data?.message || `Dodo API error (${resp.status})`,
+        details: data || { raw_response: rawResponse },
+        status: resp.status,
+        debug_info: {
+          api_key_set: !!DODO_API_KEY,
+          api_key_prefix: DODO_API_KEY ? DODO_API_KEY.substring(0, 10) + '...' : null,
+          endpoint: `${DODO_API_BASE}/checkouts`
+        }
       }, { status: resp.status })
     }
 
