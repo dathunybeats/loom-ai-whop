@@ -253,7 +253,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       planInfo.videosRemaining === null || // Unlimited (paid plans)
       (planInfo.videosRemaining !== null && planInfo.videosRemaining > 0) // Trial with remaining videos
     )
-  )
+  ) ?? false
 
 
   return (
