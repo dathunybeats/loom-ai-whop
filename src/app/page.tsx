@@ -23,7 +23,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <span className="text-2xl font-bold text-foreground">Loom.ai</span>
+              <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/login">
@@ -59,19 +59,19 @@ export default async function Home() {
               </p>
             </div>
             <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-600 flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/signup">
-                <Button size="lg" className="h-12 px-8">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
               <Button size="lg" variant="outline" className="h-12 px-8">
                 <Play className="mr-2 h-4 w-4" />
                 Watch Demo
               </Button>
+              <Link href="/signup">
+                <Button size="lg" className="h-12 px-8">
+                  Try 5 Videos Free
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
             <div className="mt-8 animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-800">
-              <p className="text-sm text-muted-foreground">7-day free trial • No credit card required</p>
+              <p className="text-sm text-muted-foreground">No credit card required • Instant access after signup</p>
             </div>
           </div>
         </div>
@@ -256,7 +256,7 @@ export default async function Home() {
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  &ldquo;Loom.ai increased our cold outreach response rate by 400%. The personalization is incredible.&rdquo;
+                  &ldquo;Meraki Reach increased our cold outreach response rate by 400%. The personalization is incredible.&rdquo;
                 </p>
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-primary rounded-full mr-3" />
@@ -321,7 +321,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Why Choose Loom.ai Over Competitors
+              Why Choose Meraki Reach Over Competitors
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -350,7 +350,7 @@ export default async function Home() {
                   <div className="w-8 h-8 bg-green-100 rounded mr-3 flex items-center justify-center">
                     <Check className="h-4 w-4 text-green-600" />
                   </div>
-                  Loom.ai
+                  Meraki Reach
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -457,7 +457,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <span className="text-2xl font-bold text-foreground">Loom.ai</span>
+              <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
               <p className="text-muted-foreground mt-4">
                 AI-powered video personalization for modern sales teams.
               </p>
@@ -491,7 +491,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 Loom.ai. All rights reserved.</p>
+            <p>&copy; 2024 Meraki Reach. All rights reserved.</p>
           </div>
         </div>
       </footer>

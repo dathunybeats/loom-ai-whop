@@ -12,6 +12,8 @@ export interface UserSubscription {
   videos_limit: number
   created_at: string
   updated_at: string
+  welcomed_at?: string | null
+  onboarding_completed?: boolean | null
 }
 
 export interface VideoUsage {
@@ -31,6 +33,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
   const { data, error } = await supabase
     .from('user_subscriptions')
     .select('*')
+    .eq('user_id', userId)
     .maybeSingle()
 
   if (error) {
@@ -48,6 +51,7 @@ export async function getCurrentMonthUsage(userId: string): Promise<VideoUsage |
   const { data, error } = await supabase
     .from('video_usage')
     .select('*')
+    .eq('user_id', userId)
     .eq('month', currentMonth)
     .maybeSingle()
 
@@ -61,17 +65,16 @@ export async function getCurrentMonthUsage(userId: string): Promise<VideoUsage |
 
 export async function createUserTrial(userId: string): Promise<UserSubscription | null> {
   const supabase = createClient()
-  
-  const trialEnd = new Date()
-  trialEnd.setDate(trialEnd.getDate() + 14) // 14 day trial
-  
+
+  // No time limit, only video count limit
   const { data, error } = await supabase
     .from('user_subscriptions')
     .insert({
       user_id: userId,
       plan_id: 'trial',
       status: 'trial',
-      current_period_end: trialEnd.toISOString(),
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date('2099-12-31').toISOString(), // Far future date (no time limit)
       videos_limit: 5,
       videos_used: 0
     })
@@ -88,26 +91,31 @@ export async function createUserTrial(userId: string): Promise<UserSubscription 
 
 export async function canUserCreateVideo(userId: string): Promise<boolean> {
   const subscription = await getUserSubscription(userId)
-  
+
   if (!subscription) return false
-  
-  // Check if subscription is active
+
+  // Check if subscription is active or trial
   if (subscription.status !== 'active' && subscription.status !== 'trial') {
     return false
   }
-  
-  // Check if current period is valid
+
+  // For trial users: only check video limit (no time restrictions)
+  if (subscription.status === 'trial') {
+    return subscription.videos_used < subscription.videos_limit
+  }
+
+  // For paid users: check period validity and video limits
   const now = new Date()
   const periodEnd = new Date(subscription.current_period_end)
   if (now > periodEnd) {
     return false
   }
-  
-  // Check video limit
+
+  // Check video limit (paid plans typically have high limits)
   if (subscription.videos_used >= subscription.videos_limit) {
     return false
   }
-  
+
   return true
 }
 
@@ -157,11 +165,10 @@ export async function getUserPlanInfo(userId: string): Promise<{
     }
   }
 
-  // Check if period is still valid
-  const now = new Date()
-  const periodEnd = new Date(subscription.current_period_end)
+  // For trials: no time expiry, only video count matters
+  // For paid: check period validity
   const isActive = subscription.status === 'active' || subscription.status === 'trial'
-  const isNotExpired = now <= periodEnd
+  const isNotExpired = subscription.status === 'trial' ? true : new Date() <= new Date(subscription.current_period_end)
 
   const planNames: Record<string, string> = {
     'trial': 'Free Trial',

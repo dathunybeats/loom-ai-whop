@@ -68,12 +68,10 @@ export async function GET(request: NextRequest) {
               }
             } else {
               // No existing subscription and no unlinked subscription - create trial
-              console.log('Creating trial subscription for new user')
+              console.log('Creating trial subscription for new user:', user.id)
 
-              const trialEnd = new Date()
-              trialEnd.setDate(trialEnd.getDate() + 14) // 14 day trial
-
-              const { error: trialError } = await supabase
+              // No time limit, only video count limit
+              const { error: trialError, data: trialData } = await supabase
                 .from('user_subscriptions')
                 .insert({
                   user_id: user.id,
@@ -81,15 +79,17 @@ export async function GET(request: NextRequest) {
                   whop_subscription_id: null,
                   status: 'trial',
                   current_period_start: new Date().toISOString(),
-                  current_period_end: trialEnd.toISOString(),
+                  current_period_end: new Date('2099-12-31').toISOString(), // Far future date (no time limit)
                   videos_limit: 5,
                   videos_used: 0
                 })
+                .select()
+                .single()
 
               if (trialError) {
                 console.error('Failed to create trial subscription:', trialError)
               } else {
-                console.log('Successfully created trial subscription')
+                console.log('Successfully created trial subscription:', trialData)
               }
             }
           } else {

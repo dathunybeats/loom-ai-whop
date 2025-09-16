@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { DashboardLayout } from '@/components/dashboard-layout'
+import { DashboardClient } from '@/components/dashboard-client'
 import { ProjectCard } from '@/components/project-card'
 import { Suspense } from 'react'
 import { DashboardStatsLoading, ProjectsGridLoading, RecentCampaignsLoading } from '@/components/ui/loading-skeleton'
@@ -89,18 +90,38 @@ export default async function Dashboard({
     console.error('Error fetching projects:', error)
   }
 
+  // Server-side initial plan for instant modal decisions
+  const { data: sub } = await supabase
+    .from('user_subscriptions')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const initialPlan = sub
+    ? {
+        status: sub.status as string,
+        videosRemaining: sub.plan_id === 'trial'
+          ? Math.max(0, (sub.videos_limit ?? 0) - (sub.videos_used ?? 0))
+          : null,
+        planName: sub.plan_id === 'trial' ? 'Free Trial' : sub.plan_id,
+        welcomedAt: sub.welcomed_at ?? null,
+        onboardingCompleted: sub.onboarding_completed ?? false
+      }
+    : undefined
+
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <Link 
-            href="/projects/new"
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
-          >
-            Create New Project
-          </Link>
-        </div>
+      <DashboardClient initialPlan={initialPlan}>
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+            <Link
+              href="/projects/new"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+            >
+              Create New Project
+            </Link>
+          </div>
 
         {/* Subscription Status Banner */}
         {/* <SubscriptionBanner /> */}
@@ -239,7 +260,7 @@ export default async function Dashboard({
               <div className="px-6 py-8">
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-semibold text-card-foreground mb-3">
-                    Welcome to Loom.ai
+                    Welcome to Meraki Reach
                   </h3>
                   <p className="text-muted-foreground max-w-2xl mx-auto">
                     Create personalized video outreach campaigns with AI-powered voice cloning and automated prospect targeting
@@ -294,7 +315,8 @@ export default async function Dashboard({
             )}
           </Suspense>
         </div>
-      </div>
+        </div>
+      </DashboardClient>
     </DashboardLayout>
   )
 }

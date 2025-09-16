@@ -216,9 +216,15 @@ export default function VideoPlayer({
 
   const handleShare = async () => {
     if (!projectId) return
-    
+
+    // Show modal immediately with placeholder URL for better UX
+    const baseUrl = window.location.origin
+    const fallbackUrl = `${baseUrl}/share/${projectId}`
+    setShareUrl(fallbackUrl)
+    setShowShareModal(true)
+
+    // Async API call to get actual share URL in background
     try {
-      // Call API to enable sharing and get the share URL
       const response = await fetch('/api/share-project', {
         method: 'POST',
         headers: {
@@ -227,20 +233,14 @@ export default function VideoPlayer({
         body: JSON.stringify({ projectId })
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to enable sharing')
+      if (response.ok) {
+        const data = await response.json()
+        setShareUrl(data.shareUrl)
       }
-
-      const data = await response.json()
-      setShareUrl(data.shareUrl)
-      setShowShareModal(true)
+      // If API fails, we keep the fallback URL already set
     } catch (error) {
-      console.error('Error creating share link:', error)
-      // Fallback to client-side URL generation if API fails
-      const baseUrl = window.location.origin
-      const shareUrl = `${baseUrl}/share/${projectId}`
-      setShareUrl(shareUrl)
-      setShowShareModal(true)
+      console.error('Error creating share link, using fallback:', error)
+      // Fallback URL is already set above
     }
   }
 
@@ -451,20 +451,26 @@ export default function VideoPlayer({
 
       {/* Share Modal */}
       {showShareModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in-0 duration-200"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Share Video</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowShareModal(false)}
-                className="p-1 hover:bg-gray-100"
+                className="p-1 hover:bg-gray-100 transition-colors"
               >
                 ×
               </Button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -474,19 +480,19 @@ export default function VideoPlayer({
                   Anyone with this link will be able to view the video.
                 </p>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="text"
                   value={shareUrl}
                   readOnly
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-mono"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <Button
                   onClick={copyToClipboard}
                   variant="outline"
                   size="sm"
-                  className="px-3 py-2 flex items-center space-x-1"
+                  className="px-3 py-2 flex items-center space-x-1 transition-all hover:scale-105"
                 >
                   {copySuccess ? (
                     <>
@@ -501,11 +507,12 @@ export default function VideoPlayer({
                   )}
                 </Button>
               </div>
-              
+
               <div className="flex justify-end space-x-2 pt-4">
                 <Button
                   variant="outline"
                   onClick={() => setShowShareModal(false)}
+                  className="transition-colors"
                 >
                   Close
                 </Button>

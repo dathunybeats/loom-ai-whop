@@ -56,7 +56,7 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
   const getRestrictionMessage = () => {
     if (!planInfo) {
       return {
-        title: 'Get Started with Loom.ai',
+        title: 'Get Started with Meraki Reach',
         description: 'Choose a plan to start creating personalized videos',
         icon: Crown,
         variant: 'default' as const

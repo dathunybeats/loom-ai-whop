@@ -184,7 +184,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Link href="/dashboard">
                 <CameraIcon className="h-5 w-5 text-indigo-600" />
-                <span className="text-base font-semibold">Loom.ai</span>
+                <span className="text-base font-semibold">Meraki Reach</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

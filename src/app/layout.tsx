@@ -19,8 +19,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Loom.ai - AI-Powered Video Outreach",
+  title: "Meraki Reach - AI-Powered Video Outreach",
   description: "Create personalized video outreach campaigns with AI-powered voice cloning and automated prospect targeting",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export default function RootLayout({

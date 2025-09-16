@@ -98,7 +98,7 @@ export function SignupForm({
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Account Created!</CardTitle>
             <CardDescription>
-              Welcome to Loom.ai! Redirecting you to your dashboard...
+              Welcome to Meraki Reach! Redirecting you to your dashboard...
             </CardDescription>
           </CardHeader>
           <CardContent>

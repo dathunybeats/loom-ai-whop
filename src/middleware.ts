@@ -42,6 +42,8 @@ export async function middleware(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/api/auth') &&
     !request.nextUrl.pathname.startsWith('/api/webhooks') &&
+    // Allow Dodo Payments webhooks without auth
+    !request.nextUrl.pathname.startsWith('/api/payments/dodo/webhook') &&
     !request.nextUrl.pathname.startsWith('/landing') &&
     !request.nextUrl.pathname.startsWith('/share') &&
     request.nextUrl.pathname !== '/'
