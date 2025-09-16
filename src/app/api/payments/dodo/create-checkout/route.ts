@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const DODO_API_BASE = process.env.DODO_API_BASE || 'https://api.dodopayments.com'
+const DODO_API_BASE = process.env.DODO_API_BASE || 'https://live.dodopayments.com'
 const DODO_API_KEY = process.env.DODO_API_KEY
 const DODO_BRAND_ID = process.env.DODO_BRAND_ID
 
