@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Check, ChevronDown, Star, ArrowRight, Play, Shield, Zap, Target, Users, TrendingUp, Clock } from 'lucide-react'
-import { PricingPlans } from '@/components/pricing-plans'
+import { Pricing } from '@/components/ui/pricing-cards'
+import { AnimatedShinyText } from '@/components/ui/animated-shiny-text'
+import { Marquee } from '@/components/ui/marquee'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -38,13 +40,15 @@ export default async function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-28">
+      <section className="py-12 lg:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
-              <Badge variant="secondary" className="mb-6">
-                <Zap className="w-4 h-4 mr-2" />
-                AI-Powered Video Personalization
+              <Badge variant="secondary" className="mb-6 border border-border rounded-full">
+                <Zap className="w-4 h-4 mr-2 text-black" />
+                <AnimatedShinyText className="text-sm font-semibold text-black">
+                  AI-Powered Video Personalization
+                </AnimatedShinyText>
               </Badge>
             </div>
             <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-200">
@@ -70,7 +74,7 @@ export default async function Home() {
                 </Button>
               </Link>
             </div>
-            <div className="mt-8 animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-800">
+            <div className="mt-4 animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-800">
               <p className="text-sm text-muted-foreground">No credit card required • Instant access after signup</p>
             </div>
           </div>
@@ -78,23 +82,23 @@ export default async function Home() {
       </section>
 
       {/* Trusted Companies Marquee */}
-      <section className="py-12 border-t border-border">
+      <section className="py-4 border-b border-border bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <p className="text-sm text-muted-foreground">Trusted by teams at</p>
-          </div>
-          <div className="flex justify-center items-center space-x-12 opacity-60">
-            <div className="text-2xl font-bold">Microsoft</div>
-            <div className="text-2xl font-bold">Google</div>
-            <div className="text-2xl font-bold">Salesforce</div>
-            <div className="text-2xl font-bold">HubSpot</div>
-            <div className="text-2xl font-bold">Stripe</div>
-          </div>
+          <Marquee className="py-1" pauseOnHover speed={40}>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">Microsoft</div>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">Google</div>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">Salesforce</div>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">HubSpot</div>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">Stripe</div>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">Amazon</div>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">Apple</div>
+            <div className="text-2xl font-bold mx-8 opacity-60 hover:opacity-100 transition-opacity">Meta</div>
+          </Marquee>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20">
+      <section id="features" className="py-20 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -105,10 +109,16 @@ export default async function Home() {
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
-            <Card className="animate-in fade-in-0 slide-in-from-left-4 duration-1000">
+            <Card className="animate-in fade-in-0 slide-in-from-left-4 duration-1000 border-2 border-border hover:border-primary/30 transition-colors">
               <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Target className="h-6 w-6 text-primary" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 border border-primary/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className="text-primary" fill="none">
+                    <path d="M2 12C2 8.22876 2 6.34315 3.17157 5.17157C4.34315 4 6.22876 4 10 4H14C17.7712 4 19.6569 4 20.8284 5.17157C22 6.34315 22 8.22876 22 12C22 15.7712 22 17.6569 20.8284 18.8284C19.6569 20 17.7712 20 14 20H10C6.22876 20 4.34315 20 3.17157 18.8284C2 17.6569 2 15.7712 2 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M11 10C11 8.89543 10.1046 8 9 8C7.89543 8 7 8.89543 7 10C7 11.1046 7.89543 12 9 12C10.1046 12 11 11.1046 11 10Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M13 16C13 13.7909 11.2091 12 9 12C6.79086 12 5 13.7909 5 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M15 9H19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M15 12H19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </div>
                 <CardTitle>AI Video Personalization</CardTitle>
                 <CardDescription>
@@ -116,10 +126,14 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card className="animate-in fade-in-0 slide-in-from-right-4 duration-1000">
+            <Card className="animate-in fade-in-0 slide-in-from-right-4 duration-1000 border-2 border-border hover:border-primary/30 transition-colors">
               <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-primary" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 border border-primary/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className="text-primary" fill="none">
+                    <path d="M16.9017 6.12874C18 7.25748 18 9.07416 18 12.7075V14.2925C18 17.9258 18 19.7425 16.9017 20.8713C15.8033 22 14.0355 22 10.5 22C6.96447 22 5.1967 22 4.09835 20.8713C3 19.7425 3 17.9258 3 14.2925V12.7075C3 9.07416 3 7.25748 4.09835 6.12874C5.1967 5 6.96447 5 10.5 5C14.0355 5 15.8033 5 16.9017 6.12874Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M7.5 5.5V10.3693C7.5 11.3046 7.5 11.7722 7.78982 11.9396C8.35105 12.2638 9.4038 11.1823 9.90375 10.8567C10.1937 10.6678 10.3387 10.5734 10.5 10.5734C10.6613 10.5734 10.8063 10.6678 11.0962 10.8567C11.5962 11.1823 12.6489 12.2638 13.2102 11.9396C13.5 11.7722 13.5 11.3046 13.5 10.3693V5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9 2H11C15.714 2 18.0711 2 19.5355 3.46447C21 4.92893 21 7.28595 21 12V18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </div>
                 <CardTitle>Bulk Prospect Management</CardTitle>
                 <CardDescription>
@@ -127,10 +141,15 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card className="animate-in fade-in-0 slide-in-from-left-4 duration-1000 delay-200">
+            <Card className="animate-in fade-in-0 slide-in-from-left-4 duration-1000 delay-200 border-2 border-border hover:border-primary/30 transition-colors">
               <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <TrendingUp className="h-6 w-6 text-primary" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 border border-primary/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className="text-primary" fill="none">
+                    <path d="M7 17L7 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M12 17L12 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M17 17L17 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M2.5 12C2.5 7.52166 2.5 5.28249 3.89124 3.89124C5.28249 2.5 7.52166 2.5 12 2.5C16.4783 2.5 18.7175 2.5 20.1088 3.89124C21.5 5.28249 21.5 7.52166 21.5 12C21.5 16.4783 21.5 18.7175 20.1088 20.1088C18.7175 21.5 16.4783 21.5 12 21.5C7.52166 21.5 5.28249 21.5 3.89124 20.1088C2.5 18.7175 2.5 16.4783 2.5 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  </svg>
                 </div>
                 <CardTitle>Advanced Analytics</CardTitle>
                 <CardDescription>
@@ -138,9 +157,9 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card className="animate-in fade-in-0 slide-in-from-right-4 duration-1000 delay-200">
+            <Card className="animate-in fade-in-0 slide-in-from-right-4 duration-1000 delay-200 border-2 border-border hover:border-primary/30 transition-colors">
               <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 border border-primary/20">
                   <Shield className="h-6 w-6 text-primary" />
                 </div>
                 <CardTitle>Enterprise Security</CardTitle>
@@ -154,7 +173,7 @@ export default async function Home() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 bg-muted/50">
+      <section className="py-20 bg-white border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -162,8 +181,8 @@ export default async function Home() {
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="text-center p-6 border border-border rounded-xl bg-background/50 hover:bg-background transition-colors">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-primary/20">
                 <Clock className="h-8 w-8 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-bold mb-4">Save 95% Time</h3>
@@ -171,8 +190,8 @@ export default async function Home() {
                 Create hundreds of personalized videos in minutes instead of hours
               </p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="text-center p-6 border border-border rounded-xl bg-background/50 hover:bg-background transition-colors">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-primary/20">
                 <TrendingUp className="h-8 w-8 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-bold mb-4">Increase Response Rates</h3>
@@ -180,8 +199,8 @@ export default async function Home() {
                 Personalized videos get 3x higher engagement than generic content
               </p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="text-center p-6 border border-border rounded-xl bg-background/50 hover:bg-background transition-colors">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-primary/20">
                 <Zap className="h-8 w-8 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-bold mb-4">Scale Effortlessly</h3>
@@ -240,7 +259,7 @@ export default async function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-muted/50">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -259,7 +278,11 @@ export default async function Home() {
                   &ldquo;Meraki Reach increased our cold outreach response rate by 400%. The personalization is incredible.&rdquo;
                 </p>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-primary rounded-full mr-3" />
+                  <img
+                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=40&h=40&fit=crop&crop=face&auto=format&q=60"
+                    alt="Sarah Chen"
+                    className="w-10 h-10 rounded-full mr-3 object-cover"
+                  />
                   <div>
                     <p className="font-semibold">Sarah Chen</p>
                     <p className="text-sm text-muted-foreground">VP Sales, TechCorp</p>
@@ -278,7 +301,11 @@ export default async function Home() {
                   &ldquo;We saved 20 hours per week on video creation while tripling our conversion rates.&rdquo;
                 </p>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-primary rounded-full mr-3" />
+                  <img
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face&auto=format&q=60"
+                    alt="Michael Rodriguez"
+                    className="w-10 h-10 rounded-full mr-3 object-cover"
+                  />
                   <div>
                     <p className="font-semibold">Michael Rodriguez</p>
                     <p className="text-sm text-muted-foreground">Marketing Director, Growth Inc</p>
@@ -297,7 +324,11 @@ export default async function Home() {
                   &ldquo;The AI personalization is so natural, prospects think we made individual videos for them.&rdquo;
                 </p>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-primary rounded-full mr-3" />
+                  <img
+                    src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face&auto=format&q=60"
+                    alt="Emily Johnson"
+                    className="w-10 h-10 rounded-full mr-3 object-cover"
+                  />
                   <div>
                     <p className="font-semibold">Emily Johnson</p>
                     <p className="text-sm text-muted-foreground">Founder, StartupXYZ</p>
@@ -310,14 +341,12 @@ export default async function Home() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <PricingPlans />
-        </div>
+      <section id="pricing">
+        <Pricing />
       </section>
 
       {/* Why Choose Us vs Competitors */}
-      <section className="py-20 bg-muted/50">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">

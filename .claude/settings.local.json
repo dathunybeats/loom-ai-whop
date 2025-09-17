@@ -37,7 +37,12 @@
       "Bash(npm test:*)",
       "Bash(copy:*)",
       "Bash(tree:*)",
-      "WebFetch(domain:docs.dodopayments.com)"
+      "WebFetch(domain:docs.dodopayments.com)",
+      "Bash(npm ls:*)",
+      "Bash(del \"C:\\Users\\hanim\\OneDrive\\Desktop\\loom.ai\\fix-test-user.js\")",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []

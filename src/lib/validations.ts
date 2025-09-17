@@ -88,31 +88,6 @@ export const videoUploadSchema = z.object({
   file: z.any().refine((file) => file instanceof File, 'Valid file is required'),
 })
 
-// Webhook validation schemas
-export const whopMembershipSchema = z.object({
-  id: z.string().min(1, 'Membership ID is required'),
-  user_id: z.string().min(1, 'User ID is required'),
-  access_pass: z.object({
-    id: z.string().min(1, 'Access pass ID is required'),
-    title: z.string().min(1, 'Access pass title is required'),
-  }),
-  status: z.enum(['active', 'cancelled', 'expired', 'past_due']),
-  cancel_at_period_end: z.boolean(),
-  current_period_start: z.number().positive('Invalid period start'),
-  current_period_end: z.number().positive('Invalid period end'),
-  trial_start: z.number().positive().optional(),
-  trial_end: z.number().positive().optional(),
-})
-
-export const whopWebhookSchema = z.object({
-  type: z.string().min(1, 'Webhook type is required'),
-  data: z.object({
-    membership: whopMembershipSchema,
-  }),
-})
-
-export type WhopWebhookPayload = z.infer<typeof whopWebhookSchema>
-export type WhopMembership = z.infer<typeof whopMembershipSchema>
 
 // Share project validation
 export const shareProjectSchema = z.object({

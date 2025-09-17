@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User } from '@supabase/supabase-js'
+import type { AuthChangeEvent, User } from '@supabase/supabase-js'
+import { useAuth } from './AuthContext'
 
 // Dodo Payments plan configurations
 const PLAN_CONFIGS = {
@@ -43,6 +44,8 @@ interface UserSubscription {
   billing_period: string
   created_at: string
   updated_at: string
+  welcomed_at?: string | null
+  onboarding_completed?: boolean | null
 }
 
 interface PlanInfo {
@@ -55,6 +58,7 @@ interface PlanInfo {
   videosLimit: number
   currentPeriodEnd: string | null
   price: string
+  welcomedAt?: string | null
 }
 
 interface SubscriptionContextType {
@@ -71,128 +75,215 @@ interface SubscriptionContextType {
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const { user: authUser, loading: authLoading } = useAuth()
   const [userProfile, setUserProfile] = useState<{ full_name?: string } | null>(null)
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null)
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
 
   const supabase = createClient()
+  const lastFetchedUserIdRef = useRef<string | null>(null)
+  const pendingFetchRef = useRef<Promise<void> | null>(null)
+  const isInitializedRef = useRef(false)
+  const mountedRef = useRef(true)
+  const planInfoRef = useRef<PlanInfo | null>(null)
+  const subscriptionRef = useRef<UserSubscription | null>(null)
 
-  const fetchUserData = async (currentUser: User) => {
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  const fetchUserData = async (currentUser: User, options: { force?: boolean } = {}) => {
+    const { force = false } = options
+
     if (!currentUser) {
       console.log('SubscriptionContext: No user provided, skipping data fetch')
-      setLoading(false)
+      if (mountedRef.current) {
+        setLoading(false)
+      }
       return
     }
 
-    console.log('SubscriptionContext: Fetching user data for:', currentUser.id)
+    const hasHydratedData =
+      isInitializedRef.current &&
+      lastFetchedUserIdRef.current === currentUser.id &&
+      planInfoRef.current !== null &&
+      subscriptionRef.current !== null
 
-    try {
-      // Set a timeout for the entire operation
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Database operation timeout')), 10000) // 10 second timeout
-      })
-
-      const dataFetchPromise = (async () => {
-        // Fetch user profile with better error handling
-        console.log('SubscriptionContext: Fetching profile...')
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single()
-
-        if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
-          console.warn('Profile fetch error:', profileError)
-        } else {
-          console.log('SubscriptionContext: Profile fetched successfully:', profile?.id)
-        }
-        setUserProfile(profile || null)
-
-        // Fetch or create subscription with better error handling
-        console.log('SubscriptionContext: Fetching subscription...')
-        const { data: subscription, error: subscriptionError } = await supabase
-          .from('user_subscriptions')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .single()
-
-        // If no subscription exists, create a trial subscription
-        if (subscriptionError && subscriptionError.code === 'PGRST116') {
-          console.log('SubscriptionContext: No subscription found, creating trial subscription')
-          await createTrialSubscription()
-          return // createTrialSubscription will call fetchUserData again
-        }
-
-        if (subscriptionError) {
-          console.error('SubscriptionContext: Subscription fetch error:', subscriptionError)
-          throw subscriptionError
-        }
-
-        console.log('SubscriptionContext: Subscription fetched successfully:', subscription.id)
-        setSubscription(subscription)
-
-        // Convert subscription to planInfo format
-        const planConfig = PLAN_CONFIGS[subscription.plan_id as keyof typeof PLAN_CONFIGS] || PLAN_CONFIGS.trial
-
-        const isActive = subscription.status === 'active' || subscription.status === 'trial'
-        const videosRemaining = subscription.videos_limit === -1 ? null :
-          Math.max(0, subscription.videos_limit - subscription.videos_used)
-
-        const planInfoData: PlanInfo = {
-          planName: subscription.plan_name || planConfig.name,
-          planId: subscription.plan_id,
-          status: subscription.status,
-          isActive,
-          videosRemaining,
-          videosUsed: subscription.videos_used,
-          videosLimit: subscription.videos_limit,
-          currentPeriodEnd: subscription.current_period_end,
-          price: planConfig.price
-        }
-
-        setPlanInfo(planInfoData)
-        console.log('✅ SubscriptionContext: Subscription data loaded:', planInfoData)
-      })()
-
-      // Race between data fetch and timeout
-      await Promise.race([dataFetchPromise, timeoutPromise])
-
-    } catch (error) {
-      console.error('SubscriptionContext: Error fetching user data:', error)
-      // Set fallback state if we have a user but failed to fetch data
-      if (currentUser) {
-        console.log('SubscriptionContext: Setting fallback trial state')
-        setPlanInfo({
-          planName: 'Trial',
-          planId: 'trial',
-          status: 'trial',
-          isActive: true,
-          videosRemaining: 5,
-          videosUsed: 0,
-          videosLimit: 5,
-          currentPeriodEnd: null,
-          price: 'Free'
-        })
+    if (!force && hasHydratedData) {
+      console.log('SubscriptionContext: Using cached subscription data for:', currentUser.id)
+      if (mountedRef.current) {
+        setLoading(false)
       }
-    } finally {
-      console.log('SubscriptionContext: Setting loading to false')
-      setLoading(false)
+      return
     }
+
+    if (pendingFetchRef.current) {
+      console.log('SubscriptionContext: Awaiting ongoing fetch for:', currentUser.id)
+      return pendingFetchRef.current
+    }
+
+    console.log('SubscriptionContext: Fetching user data for:', currentUser.id)
+    if (mountedRef.current) {
+      setLoading(true)
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+    const fetchPromise = (async () => {
+      try {
+        const timeoutMs = process.env.NODE_ENV === 'development' ? 15000 : 10000
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Database operation timeout')), timeoutMs)
+        })
+
+        const dataFetchPromise = (async () => {
+          console.log('SubscriptionContext: Fetching profile...')
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single()
+
+          if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
+            console.warn('Profile fetch error:', profileError)
+          } else {
+            console.log('SubscriptionContext: Profile fetched successfully:', profile?.id)
+          }
+
+          if (mountedRef.current) {
+            setUserProfile(profile || null)
+          }
+
+          console.log('SubscriptionContext: Fetching subscription...')
+          const { data: subscriptionRecord, error: subscriptionError } = await supabase
+            .from('user_subscriptions')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .single()
+
+          let normalizedSubscription = subscriptionRecord
+
+          if (subscriptionError && subscriptionError.code === 'PGRST116') {
+            console.log('SubscriptionContext: No subscription found, creating trial subscription')
+            const created = await createTrialForUser(currentUser, { skipRefresh: true })
+            if (!created) {
+              throw new Error('Failed to create trial subscription')
+            }
+
+            const { data: createdSubscription, error: createdSubscriptionError } = await supabase
+              .from('user_subscriptions')
+              .select('*')
+              .eq('user_id', currentUser.id)
+              .single()
+
+            if (createdSubscriptionError) {
+              console.error('SubscriptionContext: Subscription fetch error after trial creation:', createdSubscriptionError)
+              throw createdSubscriptionError
+            }
+
+            normalizedSubscription = createdSubscription
+          } else if (subscriptionError) {
+            console.error('SubscriptionContext: Subscription fetch error:', subscriptionError)
+            throw subscriptionError
+          }
+
+          if (!normalizedSubscription) {
+            throw new Error('SubscriptionContext: Unable to resolve subscription data')
+          }
+
+          console.log('SubscriptionContext: Subscription fetched successfully:', normalizedSubscription.id)
+          if (mountedRef.current) {
+            subscriptionRef.current = normalizedSubscription
+            setSubscription(normalizedSubscription)
+          }
+
+          const planConfig = PLAN_CONFIGS[normalizedSubscription.plan_id as keyof typeof PLAN_CONFIGS] || PLAN_CONFIGS.trial
+
+          const isActive = normalizedSubscription.status === 'active' || normalizedSubscription.status === 'trial'
+          const videosRemaining = normalizedSubscription.videos_limit === -1 ? null :
+            Math.max(0, normalizedSubscription.videos_limit - normalizedSubscription.videos_used)
+
+          const planInfoData: PlanInfo = {
+            planName: normalizedSubscription.plan_name || planConfig.name,
+            planId: normalizedSubscription.plan_id,
+            status: normalizedSubscription.status,
+            isActive,
+            videosRemaining,
+            videosUsed: normalizedSubscription.videos_used,
+            videosLimit: normalizedSubscription.videos_limit,
+            currentPeriodEnd: normalizedSubscription.current_period_end,
+            price: planConfig.price,
+            welcomedAt: normalizedSubscription.welcomed_at || null
+          }
+
+          if (mountedRef.current) {
+            planInfoRef.current = planInfoData
+            setPlanInfo(planInfoData)
+          }
+          console.log('SubscriptionContext: Subscription data loaded:', planInfoData)
+        })()
+
+        await Promise.race([dataFetchPromise, timeoutPromise])
+
+        if (mountedRef.current) {
+          isInitializedRef.current = true
+          lastFetchedUserIdRef.current = currentUser.id
+        }
+      } catch (error) {
+        console.error('SubscriptionContext: Error fetching user data:', error)
+        if (currentUser && mountedRef.current) {
+          console.log('SubscriptionContext: Setting fallback trial state')
+          const fallbackPlan: PlanInfo = {
+            planName: 'Trial',
+            planId: 'trial',
+            status: 'trial',
+            isActive: true,
+            videosRemaining: 5,
+            videosUsed: 0,
+            videosLimit: 5,
+            currentPeriodEnd: null,
+            price: 'Free',
+            welcomedAt: null
+          }
+          setPlanInfo((previous) => {
+            if (previous) {
+              return previous
+            }
+            planInfoRef.current = fallbackPlan
+            return fallbackPlan
+          })
+        }
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        console.log('SubscriptionContext: Setting loading to false')
+        if (mountedRef.current) {
+          setLoading(false)
+        }
+        pendingFetchRef.current = null
+      }
+    })()
+
+    pendingFetchRef.current = fetchPromise
+    return fetchPromise
   }
 
-  const createTrialSubscription = async (): Promise<boolean> => {
-    if (!user) return false
+  async function createTrialForUser(targetUser: User, options: { skipRefresh?: boolean } = {}): Promise<boolean> {
+    const { skipRefresh = false } = options
 
     try {
-      console.log('Creating trial subscription for user:', user.id)
+      console.log('SubscriptionContext: Creating trial subscription for user:', targetUser.id)
 
       const trialEnd = new Date()
       trialEnd.setDate(trialEnd.getDate() + 7) // 7-day trial
 
       const trialSubscription = {
-        user_id: user.id,
+        user_id: targetUser.id,
         plan_id: 'trial',
         plan_name: 'Trial',
         status: 'trial' as const,
@@ -208,109 +299,86 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         .upsert(trialSubscription, { onConflict: 'user_id' })
 
       if (error) {
-        console.error('Failed to create trial subscription:', error)
+        console.error('SubscriptionContext: Failed to create trial subscription:', error)
         return false
       }
 
-      console.log('✅ Trial subscription created')
-      await fetchUserData(user) // Refresh data
+      console.log('SubscriptionContext: Trial subscription created')
+      if (!skipRefresh) {
+        await fetchUserData(targetUser, { force: true })
+      }
       return true
 
     } catch (error) {
-      console.error('Error creating trial subscription:', error)
+      console.error('SubscriptionContext: Error creating trial subscription:', error)
       return false
     }
   }
 
+  const createTrialSubscription = async (): Promise<boolean> => {
+    if (!user) return false
+    return createTrialForUser(user)
+  }
+
   const refreshSubscription = async () => {
     if (user) {
-      setLoading(true)
-      await fetchUserData(user)
+      await fetchUserData(user, { force: true })
     }
   }
 
   // Initialize authentication and subscription data
+  // Watch for auth changes from AuthContext (eliminates duplicate auth listeners)
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        console.log('SubscriptionContext: Initializing auth...')
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-        console.log('SubscriptionContext: Current user:', currentUser?.id)
-        setUser(currentUser)
+    if (authLoading) {
+      setLoading(true)
+      return
+    }
 
-        if (currentUser) {
-          await fetchUserData(currentUser)
-        } else {
-          console.log('SubscriptionContext: No user found')
-          setLoading(false)
-        }
-      } catch (error: any) {
-        console.error('SubscriptionContext: Auth initialization error:', error)
-        setUser(null)
-        setPlanInfo({
-          planName: 'Trial',
-          planId: 'trial',
-          status: 'trial',
-          isActive: true,
-          videosRemaining: 5,
-          videosUsed: 0,
-          videosLimit: 5,
-          currentPeriodEnd: null,
-          price: 'Free'
-        })
+    if (!authUser) {
+      // Clear all state when no user
+      lastFetchedUserIdRef.current = null
+      isInitializedRef.current = false
+      planInfoRef.current = null
+      setPlanInfo(null)
+      subscriptionRef.current = null
+      setSubscription(null)
+      setUserProfile(null)
+      if (mountedRef.current) {
         setLoading(false)
       }
+      return
     }
 
-    initializeAuth()
+    // Check if we already have data for this user
+    const hasHydratedData =
+      isInitializedRef.current &&
+      lastFetchedUserIdRef.current === authUser.id &&
+      planInfoRef.current !== null &&
+      subscriptionRef.current !== null
 
-    // Listen for auth changes
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('SubscriptionContext: Auth state changed:', event)
-
-        // Prevent unnecessary calls during initial session load
-        if (event === 'INITIAL_SESSION' && !session?.user) {
-          console.log('SubscriptionContext: Initial session with no user, skipping fetch')
-          setUser(null)
-          setUserProfile(null)
-          setPlanInfo(null)
-          setSubscription(null)
-          setLoading(false)
-          return
-        }
-
-        setUser(session?.user || null)
-
-        if (session?.user) {
-          setLoading(true)
-          await fetchUserData(session.user)
-        } else {
-          setUserProfile(null)
-          setPlanInfo(null)
-          setSubscription(null)
-          setLoading(false)
-        }
+    if (hasHydratedData) {
+      if (mountedRef.current) {
+        setLoading(false)
       }
-    )
-
-    return () => {
-      authSubscription.unsubscribe()
+      return
     }
-  }, [])
+
+    // Fetch data for new/different user
+    fetchUserData(authUser)
+  }, [authUser, authLoading])
 
   // Calculate if user can create videos
   const canCreateVideo = process.env.NODE_ENV === 'development' ? true : (
     planInfo?.isActive && (
-      planInfo.videosRemaining === null || // Unlimited (paid plans)
-      (planInfo.videosRemaining !== null && planInfo.videosRemaining > 0) // Trial with remaining videos
+      planInfo.videosRemaining === null ||
+      (planInfo.videosRemaining !== null && planInfo.videosRemaining > 0)
     )
   ) ?? false
 
   return (
     <SubscriptionContext.Provider
       value={{
-        user,
+        user: authUser,
         userProfile,
         planInfo,
         subscription,

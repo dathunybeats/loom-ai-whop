@@ -40,16 +40,18 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
   useEffect(() => {
     if (!user) return
 
-    // Debug logging
-    console.log('DashboardClient Debug:', {
-      loading,
-      user: user?.id,
-      planInfo,
-      upgraded,
-      planStatus: planInfo?.status,
-      videosRemaining: planInfo?.videosRemaining,
-      planName: planInfo?.planName
-    })
+    // Debug logging (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('DashboardClient Debug:', {
+        loading,
+        user: user?.id,
+        planInfo,
+        upgraded,
+        planStatus: planInfo?.status,
+        videosRemaining: planInfo?.videosRemaining,
+        planName: planInfo?.planName
+      })
+    }
 
     // Handle post-payment welcome modal (via redirect param)
     if (upgraded === 'true' && planInfo?.status === 'active') {
@@ -66,7 +68,9 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
 
     // If still neither, wait
     if (!effectivePlan) {
-      console.log('DashboardClient: Waiting for plan info (context or fallback)...')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('DashboardClient: Waiting for plan info (context or fallback)...')
+      }
       return
     }
 
@@ -82,7 +86,7 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
 
     if (isPaid) {
       // Paid users: show welcome once if not yet welcomed
-      const welcomedAt = (effectivePlan as any).welcomedAt ?? null
+      const welcomedAt = planInfo?.welcomedAt ?? (effectivePlan as any).welcomedAt ?? null
       if (!welcomedAt) {
         setShowWelcomeModal(true)
       }
@@ -91,17 +95,23 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
 
     if (isTrial) {
       if (hasRemainingTrialVideos) {
-        console.log('Showing trial modal - trial user has remaining videos:', { videosRemaining })
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Showing trial modal - trial user has remaining videos:', { videosRemaining })
+        }
         setShowTrialModal(true)
       } else {
-        console.log('Showing upgrade modal - trial limit reached')
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Showing upgrade modal - trial limit reached')
+        }
         setShowUpgradeModal(true)
       }
       return
     }
 
     // Other non-active statuses (cancelled/expired): show upgrade
-    console.log('Showing upgrade modal - status is not active:', { status: effectivePlan.status })
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Showing upgrade modal - status is not active:', { status: effectivePlan.status })
+    }
     setShowUpgradeModal(true)
   }, [user, planInfo, initialPlan, loading, upgraded, router])
 
