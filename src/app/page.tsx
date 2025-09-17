@@ -485,8 +485,9 @@ export default async function Home() {
               <ul className="space-y-2">
                 <li><a href="#" className="text-muted-foreground hover:text-foreground">Help Center</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground">Documentation</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Privacy Policy</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Terms of Service</a></li>
+                <li><Link href="/privacy" className="text-muted-foreground hover:text-foreground">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="text-muted-foreground hover:text-foreground">Terms of Service</Link></li>
+                <li><Link href="/refund" className="text-muted-foreground hover:text-foreground">Refund Policy</Link></li>
               </ul>
             </div>
           </div>

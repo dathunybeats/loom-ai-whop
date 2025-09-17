@@ -22,7 +22,7 @@ const plans = [
       'Limited to 5 videos',
       'Basic features only',
     ],
-    checkoutUrl: null, // No checkout URL for free trial
+    productId: null, // No product ID for free trial
     isTrial: true,
     popular: false,
   },
@@ -32,14 +32,14 @@ const plans = [
     description: 'Perfect for individuals and small teams',
     icon: Zap,
     features: [
-      'Unlimited video creation',
+      '100 video credits per month',
       'Advanced AI voice cloning',
       'HD video quality',
       'CSV prospect upload',
       'Email & chat support',
       'Custom branding',
     ],
-    checkoutUrl: 'https://whop.com/checkout/plan_TfXAKUpmBXIMA?d2c=true',
+    productId: 'pdt_ScqkGM6dvih1xrlE04Lwo',
     isTrial: false,
     popular: true,
   },
@@ -49,6 +49,7 @@ const plans = [
     description: 'For growing businesses and agencies',
     icon: Building,
     features: [
+      '500 video credits per month',
       'Everything in Basic',
       '4K video quality',
       'Advanced analytics',
@@ -57,7 +58,7 @@ const plans = [
       'API access',
       'White-label options',
     ],
-    checkoutUrl: 'https://whop.com/checkout/plan_N97PuJswksstF?d2c=true',
+    productId: 'pdt_hixMn0obmlZ9vyr02Gmgi',
     isTrial: false,
     popular: false,
   },
@@ -67,6 +68,7 @@ const plans = [
     description: 'For large teams and enterprise',
     icon: Building,
     features: [
+      'Unlimited video credits',
       'Everything in Pro',
       'Unlimited team members',
       'Custom integrations',
@@ -75,7 +77,7 @@ const plans = [
       'Custom training',
       'Enterprise security',
     ],
-    checkoutUrl: 'https://whop.com/checkout/plan_HeStJKVzCFSSa?d2c=true',
+    productId: 'pdt_pyXVf4I6gL6TY4JkNmOCN',
     isTrial: false,
     popular: false,
   },
@@ -88,8 +90,33 @@ export function PricingPlans() {
     router.push('/signup')
   }
 
-  const handlePlanSelect = (checkoutUrl: string) => {
-    window.open(checkoutUrl, '_blank')
+  const handlePlanSelect = async (productId: string) => {
+    try {
+      const response = await fetch('/api/payments/dodo/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId: productId,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session')
+      }
+
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No checkout URL received')
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error)
+      // Could show a toast notification here
+      alert('Failed to start checkout. Please try again.')
+    }
   }
 
   return (
@@ -156,9 +183,9 @@ export function PricingPlans() {
                     Start Free Trial
                   </Button>
                 ) : (
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handlePlanSelect(plan.checkoutUrl!)}
+                  <Button
+                    className="w-full"
+                    onClick={() => handlePlanSelect(plan.productId!)}
                     variant={plan.popular ? "default" : "outline"}
                   >
                     Choose {plan.name}

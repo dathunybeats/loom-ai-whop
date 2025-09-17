@@ -46,6 +46,9 @@ export async function middleware(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/api/payments/dodo/webhook') &&
     !request.nextUrl.pathname.startsWith('/landing') &&
     !request.nextUrl.pathname.startsWith('/share') &&
+    !request.nextUrl.pathname.startsWith('/terms') &&
+    !request.nextUrl.pathname.startsWith('/privacy') &&
+    !request.nextUrl.pathname.startsWith('/refund') &&
     request.nextUrl.pathname !== '/'
   ) {
     // no user, potentially respond by redirecting the user to the login page
