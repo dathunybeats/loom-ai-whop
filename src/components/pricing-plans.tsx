@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Check, Sparkles, Zap, Building } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 
 const plans = [
   {
@@ -85,12 +87,31 @@ const plans = [
 
 export function PricingPlans() {
   const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      setIsLoading(false)
+    }
+    checkUser()
+  }, [supabase])
 
   const handleFreeTrial = () => {
     router.push('/signup')
   }
 
   const handlePlanSelect = async (productId: string) => {
+    // Check if user is authenticated
+    if (!user) {
+      // Redirect to signup with plan info
+      router.push(`/signup?plan=${productId}`)
+      return
+    }
+
     try {
       const response = await fetch('/api/payments/dodo/create-checkout', {
         method: 'POST',
@@ -103,7 +124,9 @@ export function PricingPlans() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create checkout session')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Checkout API error:', errorData)
+        throw new Error(errorData.error || 'Failed to create checkout session')
       }
 
       const data = await response.json()
@@ -114,7 +137,6 @@ export function PricingPlans() {
       }
     } catch (error) {
       console.error('Error creating checkout session:', error)
-      // Could show a toast notification here
       alert('Failed to start checkout. Please try again.')
     }
   }
@@ -187,8 +209,9 @@ export function PricingPlans() {
                     className="w-full"
                     onClick={() => handlePlanSelect(plan.productId!)}
                     variant={plan.popular ? "default" : "outline"}
+                    disabled={isLoading}
                   >
-                    Choose {plan.name}
+                    {isLoading ? 'Loading...' : user ? `Choose ${plan.name}` : `Get Started with ${plan.name}`}
                   </Button>
                 )}
               </CardContent>
