@@ -316,13 +316,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }
 
   const createTrialSubscription = async (): Promise<boolean> => {
-    if (!user) return false
-    return createTrialForUser(user)
+    if (!authUser) return false
+    return createTrialForUser(authUser)
   }
 
   const refreshSubscription = async () => {
-    if (user) {
-      await fetchUserData(user, { force: true })
+    if (authUser) {
+      await fetchUserData(authUser, { force: true })
     }
   }
 
