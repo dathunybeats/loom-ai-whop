@@ -89,65 +89,81 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     console.log('SubscriptionContext: Fetching user data for:', currentUser.id)
 
     try {
-      // Fetch user profile with better error handling
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single()
+      // Set a timeout for the entire operation
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database operation timeout')), 10000) // 10 second timeout
+      })
 
-      if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
-        console.warn('Profile fetch error:', profileError)
-      }
-      setUserProfile(profile || null)
+      const dataFetchPromise = (async () => {
+        // Fetch user profile with better error handling
+        console.log('SubscriptionContext: Fetching profile...')
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single()
 
-      // Fetch or create subscription with better error handling
-      const { data: subscription, error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .single()
+        if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
+          console.warn('Profile fetch error:', profileError)
+        } else {
+          console.log('SubscriptionContext: Profile fetched successfully:', profile?.id)
+        }
+        setUserProfile(profile || null)
 
-      // If no subscription exists, create a trial subscription
-      if (subscriptionError && subscriptionError.code === 'PGRST116') {
-        console.log('No subscription found, creating trial subscription')
-        await createTrialSubscription()
-        return // createTrialSubscription will call fetchUserData again
-      }
+        // Fetch or create subscription with better error handling
+        console.log('SubscriptionContext: Fetching subscription...')
+        const { data: subscription, error: subscriptionError } = await supabase
+          .from('user_subscriptions')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .single()
 
-      if (subscriptionError) {
-        console.error('Subscription fetch error:', subscriptionError)
-        throw subscriptionError
-      }
+        // If no subscription exists, create a trial subscription
+        if (subscriptionError && subscriptionError.code === 'PGRST116') {
+          console.log('SubscriptionContext: No subscription found, creating trial subscription')
+          await createTrialSubscription()
+          return // createTrialSubscription will call fetchUserData again
+        }
 
-      setSubscription(subscription)
+        if (subscriptionError) {
+          console.error('SubscriptionContext: Subscription fetch error:', subscriptionError)
+          throw subscriptionError
+        }
 
-      // Convert subscription to planInfo format
-      const planConfig = PLAN_CONFIGS[subscription.plan_id as keyof typeof PLAN_CONFIGS] || PLAN_CONFIGS.trial
+        console.log('SubscriptionContext: Subscription fetched successfully:', subscription.id)
+        setSubscription(subscription)
 
-      const isActive = subscription.status === 'active' || subscription.status === 'trial'
-      const videosRemaining = subscription.videos_limit === -1 ? null :
-        Math.max(0, subscription.videos_limit - subscription.videos_used)
+        // Convert subscription to planInfo format
+        const planConfig = PLAN_CONFIGS[subscription.plan_id as keyof typeof PLAN_CONFIGS] || PLAN_CONFIGS.trial
 
-      const planInfoData: PlanInfo = {
-        planName: subscription.plan_name || planConfig.name,
-        planId: subscription.plan_id,
-        status: subscription.status,
-        isActive,
-        videosRemaining,
-        videosUsed: subscription.videos_used,
-        videosLimit: subscription.videos_limit,
-        currentPeriodEnd: subscription.current_period_end,
-        price: planConfig.price
-      }
+        const isActive = subscription.status === 'active' || subscription.status === 'trial'
+        const videosRemaining = subscription.videos_limit === -1 ? null :
+          Math.max(0, subscription.videos_limit - subscription.videos_used)
 
-      setPlanInfo(planInfoData)
-      console.log('✅ Subscription data loaded:', planInfoData)
+        const planInfoData: PlanInfo = {
+          planName: subscription.plan_name || planConfig.name,
+          planId: subscription.plan_id,
+          status: subscription.status,
+          isActive,
+          videosRemaining,
+          videosUsed: subscription.videos_used,
+          videosLimit: subscription.videos_limit,
+          currentPeriodEnd: subscription.current_period_end,
+          price: planConfig.price
+        }
+
+        setPlanInfo(planInfoData)
+        console.log('✅ SubscriptionContext: Subscription data loaded:', planInfoData)
+      })()
+
+      // Race between data fetch and timeout
+      await Promise.race([dataFetchPromise, timeoutPromise])
 
     } catch (error) {
-      console.error('Error fetching user data:', error)
-      // Only set fallback state if we have a user but failed to fetch data
+      console.error('SubscriptionContext: Error fetching user data:', error)
+      // Set fallback state if we have a user but failed to fetch data
       if (currentUser) {
+        console.log('SubscriptionContext: Setting fallback trial state')
         setPlanInfo({
           planName: 'Trial',
           planId: 'trial',
@@ -161,6 +177,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         })
       }
     } finally {
+      console.log('SubscriptionContext: Setting loading to false')
       setLoading(false)
     }
   }
