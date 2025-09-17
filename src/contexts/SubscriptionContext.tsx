@@ -80,30 +80,44 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
 
   const fetchUserData = async (currentUser: User) => {
+    if (!currentUser) {
+      console.log('SubscriptionContext: No user provided, skipping data fetch')
+      setLoading(false)
+      return
+    }
+
     console.log('SubscriptionContext: Fetching user data for:', currentUser.id)
 
     try {
-      // Fetch user profile
-      const { data: profile } = await supabase
+      // Fetch user profile with better error handling
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
 
-      setUserProfile(profile)
+      if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.warn('Profile fetch error:', profileError)
+      }
+      setUserProfile(profile || null)
 
-      // Fetch or create subscription
-      let { data: subscription, error } = await supabase
+      // Fetch or create subscription with better error handling
+      const { data: subscription, error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .select('*')
         .eq('user_id', currentUser.id)
         .single()
 
       // If no subscription exists, create a trial subscription
-      if (error || !subscription) {
+      if (subscriptionError && subscriptionError.code === 'PGRST116') {
         console.log('No subscription found, creating trial subscription')
         await createTrialSubscription()
         return // createTrialSubscription will call fetchUserData again
+      }
+
+      if (subscriptionError) {
+        console.error('Subscription fetch error:', subscriptionError)
+        throw subscriptionError
       }
 
       setSubscription(subscription)
@@ -132,18 +146,20 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     } catch (error) {
       console.error('Error fetching user data:', error)
-      // Set fallback trial state
-      setPlanInfo({
-        planName: 'Trial',
-        planId: 'trial',
-        status: 'trial',
-        isActive: true,
-        videosRemaining: 5,
-        videosUsed: 0,
-        videosLimit: 5,
-        currentPeriodEnd: null,
-        price: 'Free'
-      })
+      // Only set fallback state if we have a user but failed to fetch data
+      if (currentUser) {
+        setPlanInfo({
+          planName: 'Trial',
+          planId: 'trial',
+          status: 'trial',
+          isActive: true,
+          videosRemaining: 5,
+          videosUsed: 0,
+          videosLimit: 5,
+          currentPeriodEnd: null,
+          price: 'Free'
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -235,9 +251,22 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('SubscriptionContext: Auth state changed:', event)
+
+        // Prevent unnecessary calls during initial session load
+        if (event === 'INITIAL_SESSION' && !session?.user) {
+          console.log('SubscriptionContext: Initial session with no user, skipping fetch')
+          setUser(null)
+          setUserProfile(null)
+          setPlanInfo(null)
+          setSubscription(null)
+          setLoading(false)
+          return
+        }
+
         setUser(session?.user || null)
 
         if (session?.user) {
+          setLoading(true)
           await fetchUserData(session.user)
         } else {
           setUserProfile(null)
