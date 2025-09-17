@@ -49,12 +49,26 @@ export async function middleware(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/terms') &&
     !request.nextUrl.pathname.startsWith('/privacy') &&
     !request.nextUrl.pathname.startsWith('/refund') &&
-    request.nextUrl.pathname !== '/'
+    request.nextUrl.pathname !== '/' &&
+    // Don't redirect API calls - let them fail properly
+    !request.nextUrl.pathname.startsWith('/api/') &&
+    // Don't redirect internal Next.js requests
+    !request.nextUrl.pathname.startsWith('/_next/') &&
+    // Don't redirect static files
+    !request.nextUrl.pathname.match(/\.(css|js|map|ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot)$/)
   ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    // Only redirect GET requests to avoid 405 errors
+    if (request.method === 'GET') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    } else {
+      // For non-GET requests, return 401 instead of redirecting
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
