@@ -49,6 +49,7 @@ export async function middleware(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/terms') &&
     !request.nextUrl.pathname.startsWith('/privacy') &&
     !request.nextUrl.pathname.startsWith('/refund') &&
+    !request.nextUrl.pathname.startsWith('/pricing') &&
     request.nextUrl.pathname !== '/' &&
     // Don't redirect API calls - let them fail properly
     !request.nextUrl.pathname.startsWith('/api/') &&
