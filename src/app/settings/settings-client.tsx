@@ -14,19 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { SubscriptionStatusCard } from '@/components/subscription-banner'
-import {
-  UserIconIcon,
-  NotificationIcon,
-  CreditCardIcon,
-  ShieldIcon,
-  Logout01Icon,
-  Camera01Icon01Icon,
-  Mail01Icon,
-  SmartPhone01Icon,
-  Building01Icon,
-  Save01Icon01Icon,
-  Delete02Icon
-} from '@hugeicons/react'
+import { UserIcon, Bell, Shield, CreditCard, Mail, Phone, Building, LogOut, Camera, Save, Trash2 } from 'lucide-react'
 
 interface SettingsPageClientProps {
   user: any
@@ -175,7 +163,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
 
     setLoading(true)
     try {
-      const { error } = await supabase.auth.updateUserIcon({
+      const { error } = await supabase.auth.updateUser({
         password: passwordData.newPassword
       })
 
@@ -280,7 +268,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                     disabled={loading}
                   >
                     <label htmlFor="avatar-upload" className="cursor-pointer">
-                      <Camera01Icon className="w-4 h-4 mr-2" />
+                      <Camera className="w-4 h-4 mr-2" />
                       {loading ? 'Uploading...' : 'Change Photo'}
                     </label>
                   </Button>
@@ -349,8 +337,8 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
               </div>
 
               <Button onClick={handleProfileUpdate} isLoading={loading}>
-                <Save01Icon className="w-4 h-4 mr-2" />
-                Save01Icon Changes
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
               </Button>
             </CardContent>
           </Card>
@@ -432,8 +420,8 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
               </div>
 
               <Button onClick={handlePreferencesUpdate} isLoading={loading}>
-                <Save01Icon className="w-4 h-4 mr-2" />
-                Save01Icon Preferences
+                <Save className="w-4 h-4 mr-2" />
+                Save Preferences
               </Button>
             </CardContent>
           </Card>
@@ -501,7 +489,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                   <p className="text-sm text-red-600">Permanently delete your account and all data</p>
                 </div>
                 <Button variant="destructive" onClick={handleDeleteAccount} isLoading={loading}>
-                  <Delete02Icon className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-4 h-4 mr-2" />
                   Delete Account
                 </Button>
               </div>
