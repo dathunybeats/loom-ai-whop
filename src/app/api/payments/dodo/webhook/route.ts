@@ -140,12 +140,11 @@ async function handleSuccessfulPayment(supabase: ReturnType<typeof createService
   const periodEnd = new Date()
   periodEnd.setDate(periodEnd.getDate() + 30)
 
-  // Update user subscription
-  const subscriptionData = {
-    user_id: finalUserId,
+  // Update user data with new subscription
+  const userData = {
     plan_id: productId,
     plan_name: planConfig.name,
-    status: 'active',
+    subscription_status: 'active',
     current_period_start: new Date().toISOString(),
     current_period_end: periodEnd.toISOString(),
     videos_limit: planConfig.videos_limit === -1 ? 999999 : planConfig.videos_limit,
@@ -157,11 +156,12 @@ async function handleSuccessfulPayment(supabase: ReturnType<typeof createService
     updated_at: new Date().toISOString()
   }
 
-  console.log('💾 Updating subscription:', subscriptionData)
+  console.log('💾 Updating user subscription:', userData)
 
   const { error } = await supabase
-    .from('user_subscriptions')
-    .upsert(subscriptionData, { onConflict: 'user_id' })
+    .from('users')
+    .update(userData)
+    .eq('id', finalUserId)
 
   if (error) {
     console.error('❌ Failed to update subscription:', error)
@@ -182,14 +182,14 @@ async function handleCancelledSubscription(supabase: ReturnType<typeof createSer
     return
   }
 
-  // Update subscription status to cancelled
+  // Update user subscription status to cancelled
   const { error } = await supabase
-    .from('user_subscriptions')
+    .from('users')
     .update({
-      status: 'cancelled',
+      subscription_status: 'cancelled',
       updated_at: new Date().toISOString()
     })
-    .or(`user_id.eq.${userId},dodo_subscription_id.eq.${subscriptionId}`)
+    .or(`id.eq.${userId},dodo_subscription_id.eq.${subscriptionId}`)
 
   if (error) {
     console.error('❌ Failed to cancel subscription:', error)
@@ -210,14 +210,14 @@ async function handleFailedPayment(supabase: ReturnType<typeof createServiceClie
     return
   }
 
-  // Update subscription status to past_due
+  // Update user subscription status to past_due
   const { error } = await supabase
-    .from('user_subscriptions')
+    .from('users')
     .update({
-      status: 'past_due',
+      subscription_status: 'past_due',
       updated_at: new Date().toISOString()
     })
-    .or(`user_id.eq.${userId},dodo_subscription_id.eq.${subscriptionId}`)
+    .or(`id.eq.${userId},dodo_subscription_id.eq.${subscriptionId}`)
 
   if (error) {
     console.error('❌ Failed to update payment status:', error)

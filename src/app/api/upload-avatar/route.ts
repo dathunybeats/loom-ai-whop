@@ -87,12 +87,12 @@ export async function POST(request: NextRequest) {
 
     // Update user profile with new avatar URL
     const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
+      .from('users')
+      .update({
         avatar_url: publicUrl,
         updated_at: new Date().toISOString()
       })
+      .eq('id', user.id)
       .select()
       .single()
 

@@ -1,17 +1,22 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import VoiceRecordingInstructions from './VoiceRecordingInstructions'
+import VoiceDetectionModal from './VoiceDetectionModal'
 
 interface VideoUploadProps {
   projectId: string
   onUploadComplete: (videoUrl: string) => void
   onUploadError: (error: string) => void
+  onVoiceDetected?: (detection: any) => void
 }
 
-export default function VideoUpload({ projectId, onUploadComplete, onUploadError }: VideoUploadProps) {
+export default function VideoUpload({ projectId, onUploadComplete, onUploadError, onVoiceDetected }: VideoUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [showDetectionModal, setShowDetectionModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDrag = (e: React.DragEvent) => {
@@ -118,7 +123,11 @@ export default function VideoUpload({ projectId, onUploadComplete, onUploadError
       setTimeout(() => {
         setUploading(false)
         setUploadProgress(0)
+        setUploadedFile(file) // Store file for voice detection
         onUploadComplete(result.videoUrl)
+
+        // Show voice detection modal after upload
+        setShowDetectionModal(true)
       }, 1500)
 
     } catch (error: any) {
@@ -163,13 +172,24 @@ export default function VideoUpload({ projectId, onUploadComplete, onUploadError
     fileInputRef.current?.click()
   }
 
+  const handleVoiceDetectionComplete = (result: any) => {
+    console.log('Voice detection completed:', result)
+    setShowDetectionModal(false)
+
+    if (onVoiceDetected) {
+      onVoiceDetected(result)
+    }
+  }
+
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
+      {/* Voice Recording Instructions */}
+      <VoiceRecordingInstructions compact />
       <div
         className={`
           relative border-2 border-dashed rounded-lg p-6 transition-colors
-          ${isDragging 
-            ? 'border-indigo-500 bg-indigo-50' 
+          ${isDragging
+            ? 'border-indigo-500 bg-indigo-50'
             : 'border-gray-300 hover:border-gray-400'
           }
           ${uploading ? 'pointer-events-none opacity-75' : 'cursor-pointer'}
@@ -195,7 +215,7 @@ export default function VideoUpload({ projectId, onUploadComplete, onUploadError
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-900">Uploading video...</p>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
@@ -205,20 +225,20 @@ export default function VideoUpload({ projectId, onUploadComplete, onUploadError
             </div>
           ) : (
             <div className="space-y-4">
-              <svg 
-                className="mx-auto h-12 w-12 text-gray-400" 
-                stroke="currentColor" 
-                fill="none" 
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                stroke="currentColor"
+                fill="none"
                 viewBox="0 0 48 48"
               >
-                <path 
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" 
-                  strokeWidth={2} 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
+                <path
+                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
-              
+
               <div className="space-y-2">
                 <p className="text-lg font-medium text-gray-900">
                   Drop your video here or click to browse
@@ -227,16 +247,25 @@ export default function VideoUpload({ projectId, onUploadComplete, onUploadError
                   Supports MP4, WebM, MOV, AVI, QuickTime (up to 1GB)
                 </p>
               </div>
-              
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-yellow-800">
-                  💡 <strong>Tip:</strong> Include "[FIRST_NAME]" in your video where you want the prospect's name to appear
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Remember:</strong> Say "PROSPECT" clearly in your video for AI personalization
                 </p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Voice Detection Modal */}
+      <VoiceDetectionModal
+        open={showDetectionModal}
+        onClose={() => setShowDetectionModal(false)}
+        videoFile={uploadedFile}
+        projectId={projectId}
+        onDetectionComplete={handleVoiceDetectionComplete}
+      />
     </div>
   )
 }

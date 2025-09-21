@@ -27,6 +27,12 @@ export const userProfileSchema = z.object({
   last_name: z.string().max(50, 'Last name too long').optional(),
   phone: z.string().regex(/^[\+]?[\d\s\-\(\)]*$/, 'Invalid phone number format').optional().or(z.literal('')),
   company: z.string().max(100, 'Company name too long').optional(),
+  avatar_url: z.string().url().optional().or(z.literal('')),
+  // Notification preferences
+  email_notifications: z.boolean().optional(),
+  marketing_emails: z.boolean().optional(),
+  new_project_notifications: z.boolean().optional(),
+  video_generation_notifications: z.boolean().optional(),
 })
 
 // Project validation schemas

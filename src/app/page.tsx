@@ -24,8 +24,15 @@ export default async function Home() {
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
+            <div className="flex items-center space-x-3">
+              <div className="h-8 w-8 flex-shrink-0">
+                <img
+                  src="/Component 1.svg"
+                  alt="Meraki Reach Logo"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <span className="text-1xl font-bold text-foreground">Meraki Reach</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/login">
@@ -46,7 +53,7 @@ export default async function Home() {
             <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
               <Badge variant="secondary" className="mb-6 border border-border rounded-full">
                 <Zap className="w-4 h-4 mr-2 text-black" />
-                <AnimatedShinyText className="text-sm font-semibold text-black">
+                <AnimatedShinyText className="text-sm font-sbold text-grey">
                   AI-Powered Video Personalization
                 </AnimatedShinyText>
               </Badge>
@@ -63,12 +70,12 @@ export default async function Home() {
               </p>
             </div>
             <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-600 flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button size="lg" variant="outline" className="h-12 px-8">
+              <Button size="lg" variant="outline" className="h-12 px-8 font-bold">
                 <Play className="mr-2 h-4 w-4" />
                 Watch Demo
               </Button>
               <Link href="/signup">
-                <Button size="lg" className="h-12 px-8">
+                <Button size="lg" className="h-12 font-bold px-8">
                   Try 5 Videos Free
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -486,8 +493,17 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
-              <p className="text-muted-foreground mt-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="h-8 w-8 flex-shrink-0">
+                  <img
+                    src="/Component 1.svg"
+                    alt="Meraki Reach Logo"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
+              </div>
+              <p className="text-muted-foreground">
                 AI-powered video personalization for modern sales teams.
               </p>
             </div>

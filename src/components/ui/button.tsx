@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Button as HeroButton, ButtonProps as HeroButtonProps, Spinner } from "@heroui/react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -9,17 +10,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: "bg-black text-white shadow-xs hover:bg-black/90",
+        destructive: "bg-red-600 text-white shadow-xs hover:bg-red-700 focus-visible:ring-red-600/20",
+        outline: "border border-black bg-transparent shadow-xs hover:bg-black hover:text-white",
+        secondary: "bg-gray-200 text-black shadow-xs hover:bg-gray-300",
+        ghost: "hover:bg-black/10 hover:text-black",
+        link: "text-black underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -35,25 +31,49 @@ const buttonVariants = cva(
   }
 )
 
+interface ButtonProps extends Omit<HeroButtonProps, 'color' | 'variant' | 'size'> {
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  size?: "default" | "sm" | "lg" | "icon"
+  asChild?: boolean
+  isLoading?: boolean
+}
+
 function Button({
   className,
-  variant,
-  size,
+  variant = "default",
+  size = "default",
   asChild = false,
+  isLoading = false,
+  children,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : "button"
+}: ButtonProps) {
+  if (asChild) {
+    return (
+      <Slot
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      >
+        {children}
+      </Slot>
+    )
+  }
 
   return (
-    <Comp
+    <HeroButton
+      className={cn(buttonVariants({ variant, size }), className)}
+      color="default"
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      isLoading={isLoading}
+      spinner={
+        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+      }
       {...props}
-    />
+    >
+      {children}
+    </HeroButton>
   )
 }
 
 export { Button, buttonVariants }
+export type { ButtonProps }

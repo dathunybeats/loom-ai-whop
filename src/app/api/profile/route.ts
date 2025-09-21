@@ -49,14 +49,14 @@ export async function PUT(request: NextRequest) {
 
     console.log('✅ Server authenticated user:', user.id)
 
-    // Update profile in database
+    // Update user profile in database
     const { data, error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
+      .from('users')
+      .update({
         ...validatedData,
         updated_at: new Date().toISOString()
       })
+      .eq('id', user.id)
       .select()
       .single()
 
@@ -119,9 +119,9 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Server authenticated user:', user.id)
 
-    // Fetch profile from database
+    // Fetch user data from database
     const { data: profile, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', user.id)
       .single()

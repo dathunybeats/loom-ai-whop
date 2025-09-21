@@ -227,12 +227,13 @@ export default function NewProjectPage() {
                     <Button variant="outline" asChild>
                       <Link href="/dashboard">Cancel</Link>
                     </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={loading || !name.trim()}
+                    <Button
+                      type="submit"
+                      isLoading={loading}
+                      disabled={!name.trim()}
                       className="min-w-[120px]"
                     >
-                      {loading ? 'Creating...' : 'Create Project'}
+                      Create Project
                     </Button>
                   </div>
                 </form>

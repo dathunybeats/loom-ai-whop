@@ -5,6 +5,9 @@ import { SettingsPageClient } from './settings-client'
 import { Suspense } from 'react'
 import { SettingsPageSkeleton } from '@/components/ui/settings-skeleton'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function SettingsPage() {
   const supabase = await createClient()
 
@@ -16,17 +19,17 @@ export default async function SettingsPage() {
     redirect('/login')
   }
 
-  // Fetch user profile data via server-side call
+  // Fetch user data via server-side call
   let profile = null
   try {
-    const { data: profileData } = await supabase
-      .from('profiles')
+    const { data: userData } = await supabase
+      .from('users')
       .select('*')
       .eq('id', user.id)
       .single()
-    profile = profileData
+    profile = userData
   } catch (error) {
-    console.error('Error fetching profile:', error)
+    console.error('Error fetching user data:', error)
     // Profile will be null and SettingsPageClient will handle it
   }
 

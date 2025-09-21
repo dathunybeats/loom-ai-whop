@@ -14,19 +14,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { SubscriptionStatusCard } from '@/components/subscription-banner'
-import { 
-  User, 
-  Bell, 
-  CreditCard, 
-  Shield, 
-  LogOut, 
-  Camera,
-  Mail,
-  Phone,
-  Building,
-  Save,
-  Trash2
-} from 'lucide-react'
+import {
+  UserIconIcon,
+  NotificationIcon,
+  CreditCardIcon,
+  ShieldIcon,
+  Logout01Icon,
+  Camera01Icon01Icon,
+  Mail01Icon,
+  SmartPhone01Icon,
+  Building01Icon,
+  Save01Icon01Icon,
+  Delete02Icon
+} from '@hugeicons/react'
 
 interface SettingsPageClientProps {
   user: any
@@ -175,7 +175,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
 
     setLoading(true)
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await supabase.auth.updateUserIcon({
         password: passwordData.newPassword
       })
 
@@ -201,7 +201,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
       try {
         // First delete user data
         const { error: profileError } = await supabase
-          .from('profiles')
+          .from('users')
           .delete()
           .eq('id', user.id)
 
@@ -231,7 +231,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="w-4 h-4" />
+            <UserIcon className="w-4 h-4" />
             Profile
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
@@ -280,7 +280,7 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                     disabled={loading}
                   >
                     <label htmlFor="avatar-upload" className="cursor-pointer">
-                      <Camera className="w-4 h-4 mr-2" />
+                      <Camera01Icon className="w-4 h-4 mr-2" />
                       {loading ? 'Uploading...' : 'Change Photo'}
                     </label>
                   </Button>
@@ -348,9 +348,9 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                 </div>
               </div>
 
-              <Button onClick={handleProfileUpdate} disabled={loading}>
-                <Save className="w-4 h-4 mr-2" />
-                {loading ? 'Saving...' : 'Save Changes'}
+              <Button onClick={handleProfileUpdate} isLoading={loading}>
+                <Save01Icon className="w-4 h-4 mr-2" />
+                Save01Icon Changes
               </Button>
             </CardContent>
           </Card>
@@ -431,9 +431,9 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                 />
               </div>
 
-              <Button onClick={handlePreferencesUpdate} disabled={loading}>
-                <Save className="w-4 h-4 mr-2" />
-                {loading ? 'Saving...' : 'Save Preferences'}
+              <Button onClick={handlePreferencesUpdate} isLoading={loading}>
+                <Save01Icon className="w-4 h-4 mr-2" />
+                Save01Icon Preferences
               </Button>
             </CardContent>
           </Card>
@@ -470,8 +470,8 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                 />
               </div>
 
-              <Button onClick={handlePasswordChange} disabled={loading}>
-                {loading ? 'Updating...' : 'Update Password'}
+              <Button onClick={handlePasswordChange} isLoading={loading}>
+                Update Password
               </Button>
             </CardContent>
           </Card>
@@ -500,8 +500,8 @@ export function SettingsPageClient({ user, profile }: SettingsPageClientProps) {
                   <h4 className="font-medium text-red-700">Delete Account</h4>
                   <p className="text-sm text-red-600">Permanently delete your account and all data</p>
                 </div>
-                <Button variant="destructive" onClick={handleDeleteAccount} disabled={loading}>
-                  <Trash2 className="w-4 h-4 mr-2" />
+                <Button variant="destructive" onClick={handleDeleteAccount} isLoading={loading}>
+                  <Delete02Icon className="w-4 h-4 mr-2" />
                   Delete Account
                 </Button>
               </div>

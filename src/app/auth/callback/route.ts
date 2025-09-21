@@ -36,83 +36,72 @@ export async function GET(request: NextRequest) {
       if (user) {
         console.log('User authenticated:', user.id, user.email)
 
-        // Check if user already has a subscription
-        try {
-          const { data: existingSub } = await supabase
-            .from('user_subscriptions')
-            .select('*')
-            .eq('user_id', user.id)
-            .limit(1)
+        // Create or update user record with retry logic
+        const createOrUpdateUser = async (retries = 3) => {
+          for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+              console.log(`Attempt ${attempt}: Creating/updating user record for:`, user.id)
 
-          if (!existingSub || existingSub.length === 0) {
-            // Look for unlinked subscriptions that might belong to this user
-            const { data: unlinkedSubs } = await supabase
-              .from('user_subscriptions')
-              .select('*')
-              .is('user_id', null)
-              .limit(1)
+              // Use upsert to handle both creation and updates
+              const trialEnd = new Date()
+              trialEnd.setDate(trialEnd.getDate() + 7) // 7-day trial
 
-            if (unlinkedSubs && unlinkedSubs.length > 0) {
-              console.log('Found unlinked subscription, attempting to link...')
-
-              // Link the first unlinked subscription to this user
-              const { error: linkError } = await supabase
-                .from('user_subscriptions')
-                .update({ user_id: user.id })
-                .eq('id', unlinkedSubs[0].id)
-
-              if (!linkError) {
-                console.log('Successfully linked subscription to user')
-              } else {
-                console.error('Failed to link subscription:', linkError)
-              }
-            } else {
-              // No existing subscription and no unlinked subscription - create trial
-              console.log('Creating trial subscription for new user:', user.id)
-
-              // No time limit, only video count limit
-              const { error: trialError, data: trialData } = await supabase
-                .from('user_subscriptions')
-                .insert({
-                  user_id: user.id,
+              const { error: upsertError, data: userData } = await supabase
+                .from('users')
+                .upsert({
+                  id: user.id,
+                  email: user.email,
+                  full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                   plan_id: 'trial',
-                  whop_subscription_id: null,
-                  status: 'trial',
+                  plan_name: 'Trial',
+                  subscription_status: 'trial',
                   current_period_start: new Date().toISOString(),
-                  current_period_end: new Date('2099-12-31').toISOString(), // Far future date (no time limit)
+                  current_period_end: trialEnd.toISOString(),
                   videos_limit: 5,
-                  videos_used: 0
+                  videos_used: 0,
+                  billing_period: 'trial',
+                  updated_at: new Date().toISOString()
+                }, {
+                  onConflict: 'id',
+                  ignoreDuplicates: false
                 })
                 .select()
                 .single()
 
-              if (trialError) {
-                console.error('Failed to create trial subscription:', trialError)
+              if (upsertError) {
+                console.error(`Attempt ${attempt} failed - Database error saving user:`, {
+                  error: upsertError,
+                  code: upsertError.code,
+                  details: upsertError.details,
+                  hint: upsertError.hint,
+                  message: upsertError.message,
+                  userId: user.id,
+                  userEmail: user.email
+                })
+
+                if (attempt < retries) {
+                  console.log(`Retrying in ${attempt * 1000}ms...`)
+                  await new Promise(resolve => setTimeout(resolve, attempt * 1000))
+                  continue
+                }
               } else {
-                console.log('Successfully created trial subscription:', trialData)
+                console.log('Successfully created/updated user record:', userData)
+                return userData
+              }
+            } catch (setupError) {
+              console.error(`Attempt ${attempt} exception:`, setupError)
+              if (attempt < retries) {
+                console.log(`Retrying after exception in ${attempt * 1000}ms...`)
+                await new Promise(resolve => setTimeout(resolve, attempt * 1000))
+                continue
               }
             }
-          } else {
-            console.log('User already has a subscription')
           }
-
-          // Create/update profile
-          try {
-            await supabase
-              .from('profiles')
-              .upsert({
-                id: user.id,
-                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-                email: user.email
-              }, { onConflict: 'id' })
-          } catch (e: unknown) {
-            const errorMessage = e instanceof Error ? e.message : 'Unknown error'
-            console.warn('Profile creation failed:', errorMessage)
-          }
-
-        } catch (linkError) {
-          console.warn('Subscription setup failed:', linkError)
+          console.error('All user creation attempts failed')
+          return null
         }
+
+        await createOrUpdateUser()
       }
 
       // URL to redirect to after sign up process completes

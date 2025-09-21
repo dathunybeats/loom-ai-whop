@@ -42,7 +42,20 @@
       "Bash(del \"C:\\Users\\hanim\\OneDrive\\Desktop\\loom.ai\\fix-test-user.js\")",
       "Bash(rm:*)",
       "Bash(mkdir:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(claude mcp add supabase:*)",
+      "Bash(ffmpeg:*)",
+      "Read(//c/**)",
+      "WebFetch(domain:localhost)",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__apply_migration",
+      "Bash(del tsconfig.tsbuildinfo)",
+      "Bash(node:*)",
+      "Bash(del /S /Q .next)",
+      "Bash(if exist .next rmdir /S /Q .next)",
+      "mcp__supabase__get_logs"
     ],
     "deny": [],
     "ask": []

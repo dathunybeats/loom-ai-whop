@@ -3,21 +3,17 @@
 import * as React from "react"
 import Link from "next/link"
 import {
-  ArrowUpCircleIcon,
-  BarChartIcon,
-  CameraIcon,
-  ClipboardListIcon,
-  DatabaseIcon,
-  FileCodeIcon,
-  FileIcon,
-  FileTextIcon,
-  FolderIcon,
-  HelpCircleIcon,
-  LayoutDashboardIcon,
-  ListIcon,
-  SearchIcon,
-  SettingsIcon,
-  UsersIcon,
+  LayoutDashboard,
+  Folder,
+  FileText,
+  BarChart3,
+  Database,
+  Clipboard,
+  Settings,
+  HelpCircle,
+  Users,
+  Search,
+  ArrowUp,
 } from "lucide-react"
 
 import { useSubscription } from "@/contexts/SubscriptionContext"
@@ -45,28 +41,28 @@ const data = {
     {
       title: "Dashboard",
       url: "/dashboard",
-      icon: LayoutDashboardIcon,
+      icon: LayoutDashboard,
     },
     {
       title: "Projects",
       url: "/projects",
-      icon: FolderIcon,
+      icon: Folder,
     },
     {
       title: "Voice Samples",
       url: "#",
-      icon: CameraIcon,
+      icon: FileText,
     },
     {
       title: "Analytics",
       url: "#",
-      icon: BarChartIcon,
+      icon: BarChart3,
     },
   ],
   navClouds: [
     {
       title: "Projects",
-      icon: FolderIcon,
+      icon: Folder,
       isActive: false,
       url: "/projects",
       items: [
@@ -82,7 +78,7 @@ const data = {
     },
     {
       title: "Video Production",
-      icon: CameraIcon,
+      icon: FileText,
       isActive: true,
       url: "#",
       items: [
@@ -98,7 +94,7 @@ const data = {
     },
     {
       title: "Prospects",
-      icon: UsersIcon,
+      icon: Users,
       url: "#",
       items: [
         {
@@ -113,7 +109,7 @@ const data = {
     },
     {
       title: "Campaigns",
-      icon: FileTextIcon,
+      icon: FileText,
       url: "#",
       items: [
         {
@@ -131,47 +127,47 @@ const data = {
     {
       title: "Settings",
       url: "/settings",
-      icon: SettingsIcon,
+      icon: Settings,
     },
     {
       title: "Get Help",
       url: "#",
-      icon: HelpCircleIcon,
+      icon: HelpCircle,
     },
   ],
   documents: [
     {
       name: "Voice Library",
       url: "#",
-      icon: DatabaseIcon,
+      icon: Database,
     },
     {
       name: "Reports",
       url: "#",
-      icon: ClipboardListIcon,
+      icon: Clipboard,
     },
     {
       name: "Templates",
       url: "#",
-      icon: FileIcon,
+      icon: FileText,
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user, userProfile, loading } = useSubscription()
+  const { user, userData, loading } = useSubscription()
 
   // Use real user data from SubscriptionContext or fallback to default
   const displayUser = React.useMemo(() => {
     if (user) {
       return {
-        name: userProfile?.full_name || user.user_metadata?.full_name || "User",
+        name: userData?.full_name || user.user_metadata?.full_name || "User",
         email: user.email || "user@loom.ai",
         avatar: user.user_metadata?.avatar_url || "",
       }
     }
     return data.user
-  }, [user, userProfile])
+  }, [user, userData])
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -183,7 +179,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <Link href="/dashboard">
-                <CameraIcon className="h-5 w-5 text-indigo-600" />
+                <div className="h-5 w-5 flex-shrink-0">
+                  <img
+                    src="/Component 1.svg"
+                    alt="Meraki Reach Logo"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <span className="text-base font-semibold">Meraki Reach</span>
               </Link>
             </SidebarMenuButton>

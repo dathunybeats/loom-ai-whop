@@ -82,7 +82,7 @@ export function SubscriptionBanner() {
 }
 
 export function SubscriptionStatusCard() {
-  const { planInfo, loading, subscription } = useSubscription()
+  const { planInfo, loading } = useSubscription()
   const router = useRouter()
 
   if (loading) {

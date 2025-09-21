@@ -29,23 +29,34 @@ const PLAN_CONFIGS = {
   }
 } as const
 
-interface UserSubscription {
+interface UserData {
   id: string
-  user_id: string
+  email: string | null
+  full_name: string | null
+  avatar_url: string | null
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  company: string | null
   plan_id: string
-  plan_name: string
-  status: 'active' | 'cancelled' | 'expired' | 'trial' | 'past_due'
+  plan_name: string | null
+  subscription_status: 'active' | 'cancelled' | 'expired' | 'trial' | 'past_due'
+  billing_period: string | null
   current_period_start: string
   current_period_end: string
   videos_used: number
   videos_limit: number
-  dodo_subscription_id?: string
-  dodo_customer_id?: string
-  billing_period: string
+  dodo_subscription_id: string | null
+  dodo_customer_id: string | null
+  dodo_checkout_session_id: string | null
+  email_notifications: boolean | null
+  marketing_emails: boolean | null
+  new_project_notifications: boolean | null
+  video_generation_notifications: boolean | null
+  welcomed_at: string | null
+  onboarding_completed: boolean | null
   created_at: string
   updated_at: string
-  welcomed_at?: string | null
-  onboarding_completed?: boolean | null
 }
 
 interface PlanInfo {
@@ -63,9 +74,8 @@ interface PlanInfo {
 
 interface SubscriptionContextType {
   user: User | null
-  userProfile: { full_name?: string } | null
+  userData: UserData | null
   planInfo: PlanInfo | null
-  subscription: UserSubscription | null
   loading: boolean
   canCreateVideo: boolean
   refreshSubscription: () => Promise<void>
@@ -76,9 +86,8 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user: authUser, loading: authLoading } = useAuth()
-  const [userProfile, setUserProfile] = useState<{ full_name?: string } | null>(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null)
-  const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
 
   const supabase = createClient()
@@ -87,7 +96,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const isInitializedRef = useRef(false)
   const mountedRef = useRef(true)
   const planInfoRef = useRef<PlanInfo | null>(null)
-  const subscriptionRef = useRef<UserSubscription | null>(null)
+  const userDataRef = useRef<UserData | null>(null)
 
   useEffect(() => {
     mountedRef.current = true
@@ -111,7 +120,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       isInitializedRef.current &&
       lastFetchedUserIdRef.current === currentUser.id &&
       planInfoRef.current !== null &&
-      subscriptionRef.current !== null
+      userDataRef.current !== null
 
     if (!force && hasHydratedData) {
       console.log('SubscriptionContext: Using cached subscription data for:', currentUser.id)
@@ -141,83 +150,66 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         })
 
         const dataFetchPromise = (async () => {
-          console.log('SubscriptionContext: Fetching profile...')
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
+          console.log('SubscriptionContext: Fetching user data...')
+          const { data: userRecord, error: userError } = await supabase
+            .from('users')
             .select('*')
             .eq('id', currentUser.id)
             .single()
 
-          if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
-            console.warn('Profile fetch error:', profileError)
-          } else {
-            console.log('SubscriptionContext: Profile fetched successfully:', profile?.id)
-          }
+          let normalizedUserData = userRecord
 
-          if (mountedRef.current) {
-            setUserProfile(profile || null)
-          }
-
-          console.log('SubscriptionContext: Fetching subscription...')
-          const { data: subscriptionRecord, error: subscriptionError } = await supabase
-            .from('user_subscriptions')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .single()
-
-          let normalizedSubscription = subscriptionRecord
-
-          if (subscriptionError && subscriptionError.code === 'PGRST116') {
-            console.log('SubscriptionContext: No subscription found, creating trial subscription')
+          if (userError && userError.code === 'PGRST116') {
+            console.log('SubscriptionContext: No user record found, creating trial user')
             const created = await createTrialForUser(currentUser, { skipRefresh: true })
             if (!created) {
-              throw new Error('Failed to create trial subscription')
+              throw new Error('Failed to create trial user')
             }
 
-            const { data: createdSubscription, error: createdSubscriptionError } = await supabase
-              .from('user_subscriptions')
+            const { data: createdUserData, error: createdUserError } = await supabase
+              .from('users')
               .select('*')
-              .eq('user_id', currentUser.id)
+              .eq('id', currentUser.id)
               .single()
 
-            if (createdSubscriptionError) {
-              console.error('SubscriptionContext: Subscription fetch error after trial creation:', createdSubscriptionError)
-              throw createdSubscriptionError
+            if (createdUserError) {
+              console.error('SubscriptionContext: User fetch error after trial creation:', createdUserError)
+              throw createdUserError
             }
 
-            normalizedSubscription = createdSubscription
-          } else if (subscriptionError) {
-            console.error('SubscriptionContext: Subscription fetch error:', subscriptionError)
-            throw subscriptionError
+            normalizedUserData = createdUserData
+          } else if (userError) {
+            console.error('SubscriptionContext: User fetch error:', userError)
+            throw userError
           }
 
-          if (!normalizedSubscription) {
-            throw new Error('SubscriptionContext: Unable to resolve subscription data')
+          if (!normalizedUserData) {
+            throw new Error('SubscriptionContext: Unable to resolve user data')
           }
 
-          console.log('SubscriptionContext: Subscription fetched successfully:', normalizedSubscription.id)
+          console.log('SubscriptionContext: User data fetched successfully:', normalizedUserData.id)
           if (mountedRef.current) {
-            subscriptionRef.current = normalizedSubscription
-            setSubscription(normalizedSubscription)
+            userDataRef.current = normalizedUserData
+            setUserData(normalizedUserData)
           }
 
-          const planConfig = PLAN_CONFIGS[normalizedSubscription.plan_id as keyof typeof PLAN_CONFIGS] || PLAN_CONFIGS.trial
+          const planConfig = PLAN_CONFIGS[normalizedUserData.plan_id as keyof typeof PLAN_CONFIGS] || PLAN_CONFIGS.trial
 
-          const isActive = normalizedSubscription.status === 'active' || normalizedSubscription.status === 'trial'
-          const videosRemaining = normalizedSubscription.videos_limit === -1 ? null :
-            Math.max(0, normalizedSubscription.videos_limit - normalizedSubscription.videos_used)
+          const isActive = normalizedUserData.subscription_status === 'active' || normalizedUserData.subscription_status === 'trial'
+          const videosRemaining = normalizedUserData.videos_limit === -1 ? null :
+            Math.max(0, normalizedUserData.videos_limit - normalizedUserData.videos_used)
 
           const planInfoData: PlanInfo = {
-            planName: normalizedSubscription.plan_name || planConfig.name,
-            planId: normalizedSubscription.plan_id,
-            status: normalizedSubscription.status,
+            planName: normalizedUserData.plan_name || planConfig.name,
+            planId: normalizedUserData.plan_id,
+            status: normalizedUserData.subscription_status,
             isActive,
             videosRemaining,
-            videosUsed: normalizedSubscription.videos_used,
-            videosLimit: normalizedSubscription.videos_limit,
-            currentPeriodEnd: normalizedSubscription.current_period_end,
+            videosUsed: normalizedUserData.videos_used,
+            videosLimit: normalizedUserData.videos_limit,
+            currentPeriodEnd: normalizedUserData.current_period_end,
             price: planConfig.price,
-            welcomedAt: normalizedSubscription.welcomed_at || null
+            welcomedAt: normalizedUserData.welcomed_at || null
           }
 
           if (mountedRef.current) {
@@ -277,16 +269,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     const { skipRefresh = false } = options
 
     try {
-      console.log('SubscriptionContext: Creating trial subscription for user:', targetUser.id)
+      console.log('SubscriptionContext: Creating trial user record for user:', targetUser.id)
 
       const trialEnd = new Date()
       trialEnd.setDate(trialEnd.getDate() + 7) // 7-day trial
 
-      const trialSubscription = {
-        user_id: targetUser.id,
+      const trialUserData = {
+        id: targetUser.id,
+        email: targetUser.email,
         plan_id: 'trial',
         plan_name: 'Trial',
-        status: 'trial' as const,
+        subscription_status: 'trial' as const,
         current_period_start: new Date().toISOString(),
         current_period_end: trialEnd.toISOString(),
         videos_used: 0,
@@ -295,22 +288,22 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
 
       const { error } = await supabase
-        .from('user_subscriptions')
-        .upsert(trialSubscription, { onConflict: 'user_id' })
+        .from('users')
+        .upsert(trialUserData, { onConflict: 'id' })
 
       if (error) {
-        console.error('SubscriptionContext: Failed to create trial subscription:', error)
+        console.error('SubscriptionContext: Failed to create trial user:', error)
         return false
       }
 
-      console.log('SubscriptionContext: Trial subscription created')
+      console.log('SubscriptionContext: Trial user created')
       if (!skipRefresh) {
         await fetchUserData(targetUser, { force: true })
       }
       return true
 
     } catch (error) {
-      console.error('SubscriptionContext: Error creating trial subscription:', error)
+      console.error('SubscriptionContext: Error creating trial user:', error)
       return false
     }
   }
@@ -340,9 +333,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       isInitializedRef.current = false
       planInfoRef.current = null
       setPlanInfo(null)
-      subscriptionRef.current = null
-      setSubscription(null)
-      setUserProfile(null)
+      userDataRef.current = null
+      setUserData(null)
       if (mountedRef.current) {
         setLoading(false)
       }
@@ -354,7 +346,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       isInitializedRef.current &&
       lastFetchedUserIdRef.current === authUser.id &&
       planInfoRef.current !== null &&
-      subscriptionRef.current !== null
+      userDataRef.current !== null
 
     if (hasHydratedData) {
       if (mountedRef.current) {
@@ -379,9 +371,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     <SubscriptionContext.Provider
       value={{
         user: authUser,
-        userProfile,
+        userData,
         planInfo,
-        subscription,
         loading,
         canCreateVideo,
         refreshSubscription,

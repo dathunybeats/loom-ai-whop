@@ -10,7 +10,14 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link href="/">
+              <Link href="/" className="flex items-center space-x-3">
+                <div className="h-8 w-8 flex-shrink-0">
+                  <img
+                    src="/Component 1.svg"
+                    alt="Meraki Reach Logo"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
               </Link>
             </div>
@@ -38,8 +45,17 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
-              <p className="text-muted-foreground mt-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="h-8 w-8 flex-shrink-0">
+                  <img
+                    src="/Component 1.svg"
+                    alt="Meraki Reach Logo"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <span className="text-2xl font-bold text-foreground">Meraki Reach</span>
+              </div>
+              <p className="text-muted-foreground">
                 AI-powered video personalization for modern sales teams.
               </p>
             </div>

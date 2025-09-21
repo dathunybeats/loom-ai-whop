@@ -5,12 +5,16 @@ import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
 // Lazy load modal components
 const VideoUploadModal = lazy(() => import('@/components/VideoUploadModal'))
-const CSVUploadModal = lazy(() => import('@/components/CSVUploadModal'))
+import { SimpleCSVUpload } from '@/components/SimpleCSVUpload'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Lazy load the heavy VideoPlayer component
 const VideoPlayer = lazy(() => import('@/components/VideoPlayer'))
+// Lazy load video personalization components
+const VideoPersonalizationControls = lazy(() => import('@/components/VideoPersonalizationControls').then(module => ({ default: module.VideoPersonalizationControls })))
+const VideoPersonalizationResults = lazy(() => import('@/components/VideoPersonalizationResults').then(module => ({ default: module.VideoPersonalizationResults })))
 
 interface Project {
   id: string
@@ -42,6 +46,24 @@ export default function ProjectPageClient({ project, user }: ProjectPageClientPr
     videos_generated: project.videos_generated || 0
   })
 
+  // Video personalization state
+  const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false)
+  const [isPersonalizing, setIsPersonalizing] = useState(false)
+  const [personalizationProgress, setPersonalizationProgress] = useState<{
+    total: number
+    completed: number
+    failed: number
+    current?: string
+  } | undefined>()
+  const [videoResults, setVideoResults] = useState<any[]>([])
+  const [resultsSummary, setResultsSummary] = useState({
+    total: 0,
+    pending: 0,
+    processing: 0,
+    completed: 0,
+    failed: 0
+  })
+
   // Sync client state with server-side props when they change (e.g., after refresh)
   useEffect(() => {
     setProjectStats({
@@ -50,19 +72,21 @@ export default function ProjectPageClient({ project, user }: ProjectPageClientPr
     })
   }, [project.prospects_count, project.videos_generated])
 
+  // Load video results on component mount
+  useEffect(() => {
+    refreshVideoResults()
+  }, [project.id])
+
   const handleVideoUploadSuccess = (videoUrl: string) => {
     setCurrentVideoUrl(videoUrl)
   }
 
-  const handleCSVUploadSuccess = async (uploadId: string, prospectCount: number) => {
+  const handleCSVUploadSuccess = async (prospectCount: number) => {
     // Update local project stats
     setProjectStats(prev => ({
       ...prev,
       prospects_count: prev.prospects_count + prospectCount
     }))
-    
-    // Show success message
-    alert(`Successfully imported ${prospectCount} prospects!`)
   }
 
   // Refresh project stats from database - get real-time counts
@@ -83,6 +107,7 @@ export default function ProjectPageClient({ project, user }: ProjectPageClientPr
         .eq('project_id', project.id)
         .eq('user_id', user.id)
         .eq('video_status', 'completed')
+        .not('video_url', 'is', null)
 
       setProjectStats({
         prospects_count: prospectCount || 0,
@@ -95,6 +120,112 @@ export default function ProjectPageClient({ project, user }: ProjectPageClientPr
 
   // Remove the automatic refresh on mount since server-side data is already current
   // Only refresh when needed (after CSV uploads, etc.)
+
+  // Video personalization functions
+  const handleStartPersonalization = async (settings: any, isPreview: boolean) => {
+    try {
+      setIsPersonalizing(true)
+
+      // Get all prospects for this project
+      const supabase = createClient()
+      const { data: prospects, error } = await supabase
+        .from('prospects')
+        .select('id, first_name, website_url')
+        .eq('project_id', project.id)
+        .eq('user_id', user.id)
+
+      if (error || !prospects?.length) {
+        alert('No prospects found for this project')
+        return
+      }
+
+      const prospectIds = prospects.map(p => p.id)
+
+      // Call the personalization API
+      const response = await fetch('/api/personalize-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: project.id,
+          prospectIds,
+          position: settings.position,
+          size: settings.size,
+          isPreview
+        }),
+      })
+
+      const result = await response.json()
+
+      // 🔍 CONSOLE LOG: API Response for debugging
+      console.log('📸 === VIDEO PERSONALIZATION RESULT ===')
+      console.log('✅ Success:', result.success)
+      console.log('📊 Processed:', result.processed)
+      console.log('❌ Failed:', result.failed)
+      console.log('📋 Results:', result.results)
+      
+      // Log screenshot URLs for each result
+      if (result.results) {
+        result.results.forEach((res: any, index: number) => {
+          console.log(`📸 Result ${index + 1}:`)
+          console.log(`  - Prospect: ${res.prospectName || res.prospectId}`)
+          console.log(`  - Success: ${res.success}`)
+          console.log(`  - Video URL: ${res.videoUrl}`)
+          console.log(`  - Screenshot URL: ${res.screenshotUrl || 'N/A'}`)
+          console.log(`  - Website Title: ${res.websiteTitle || 'N/A'}`)
+          if (res.error) console.log(`  - Error: ${res.error}`)
+          console.log(`  ---`)
+        })
+      }
+      console.log('========================================')
+
+      if (result.success) {
+        alert(`Successfully processed ${result.processed} videos! Check console for screenshot URLs.`)
+        await refreshProjectStats()
+        await refreshVideoResults()
+      } else {
+        alert(`Error: ${result.message}`)
+      }
+
+    } catch (error) {
+      console.error('Personalization error:', error)
+      alert('Failed to start video personalization')
+    } finally {
+      setIsPersonalizing(false)
+    }
+  }
+
+  const handleStartPreview = async (settings: any) => {
+    await handleStartPersonalization(settings, true)
+  }
+
+  const refreshVideoResults = async () => {
+    try {
+      const response = await fetch(`/api/personalize-video?projectId=${project.id}`)
+      const result = await response.json()
+
+      if (result.success) {
+        setResultsSummary(result.summary)
+        setVideoResults(result.prospects?.map((p: any) => ({
+          prospectId: p.id,
+          prospectName: `${p.first_name}${p.last_name ? ' ' + p.last_name : ''}`,
+          website: p.website_url || '',
+          status: p.video_status,
+          videoUrl: p.video_url,
+          generatedAt: p.video_generated_at
+        })) || [])
+      }
+    } catch (error) {
+      console.error('Failed to refresh video results:', error)
+    }
+  }
+
+  const handleRetryFailed = async (prospectIds: string[]) => {
+    // Similar to handleStartPersonalization but only for failed prospects
+    console.log('Retrying failed prospects:', prospectIds)
+    // Implementation here...
+  }
 
   return (
     <div className="min-h-screen">
@@ -281,6 +412,118 @@ export default function ProjectPageClient({ project, user }: ProjectPageClientPr
             </div>
           </div>
 
+          {/* Video Personalization Section */}
+          {currentVideoUrl && projectStats.prospects_count > 0 && (
+            <div className="mt-6">
+              <div className="bg-card border border-border shadow-sm rounded-lg">
+                <div className="p-4 sm:p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg leading-6 font-medium text-card-foreground">
+                        🎬 Video Personalization
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Generate personalized videos for your prospects with circular video overlay on their websites
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setIsPersonalizationOpen(!isPersonalizationOpen)}
+                      className="text-primary hover:text-primary/80 text-sm font-medium"
+                    >
+                      {isPersonalizationOpen ? 'Hide Controls' : 'Show Controls'}
+                    </button>
+                  </div>
+
+                  {isPersonalizationOpen && (
+                    <div className="space-y-6">
+                      <Suspense fallback={
+                        <div className="h-64 bg-muted rounded-lg animate-pulse" />
+                      }>
+                        <VideoPersonalizationControls
+                          projectId={project.id}
+                          prospectCount={projectStats.prospects_count}
+                          onStartPersonalization={handleStartPersonalization}
+                          onStartPreview={handleStartPreview}
+                          isProcessing={isPersonalizing}
+                          processingProgress={personalizationProgress}
+                        />
+                      </Suspense>
+
+                      {videoResults.length > 0 && (
+                        <div className="border-t pt-6">
+                          <Suspense fallback={
+                            <div className="h-32 bg-muted rounded-lg animate-pulse" />
+                          }>
+                            <VideoPersonalizationResults
+                              projectId={project.id}
+                              results={videoResults}
+                              summary={resultsSummary}
+                              isProcessing={isPersonalizing}
+                              onRefresh={refreshVideoResults}
+                              onRetryFailed={handleRetryFailed}
+                            />
+                          </Suspense>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!isPersonalizationOpen && (
+                    <div className="bg-muted/50 border border-border rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Ready for personalization!</p>
+                          <p className="text-xs text-muted-foreground">
+                            {projectStats.prospects_count} prospects • Base video uploaded
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setIsPersonalizationOpen(true)}
+                          className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+                        >
+                          Start Personalizing
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generated Videos Section - Always visible when there are videos */}
+          {videoResults.length > 0 && (
+            <div className="mt-6">
+              <div className="bg-card border border-border shadow-sm rounded-lg">
+                <div className="p-4 sm:p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg leading-6 font-medium text-card-foreground">
+                        🎬 Generated Videos
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Your personalized videos are ready! Click "View" to watch or download.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Suspense fallback={
+                    <div className="h-32 bg-muted rounded-lg animate-pulse" />
+                  }>
+                    <VideoPersonalizationResults
+                      projectId={project.id}
+                      results={videoResults}
+                      summary={resultsSummary}
+                      isProcessing={isPersonalizing}
+                      onRefresh={refreshVideoResults}
+                      onRetryFailed={handleRetryFailed}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Project Stats */}
           <div className="mt-6 bg-card border border-border shadow-sm rounded-lg">
             <div className="px-3 sm:px-4 py-4 sm:py-5">
@@ -320,14 +563,18 @@ export default function ProjectPageClient({ project, user }: ProjectPageClientPr
       </Suspense>
 
       {/* CSV Upload Modal */}
-      <Suspense fallback={null}>
-        <CSVUploadModal
-          isOpen={isCSVUploadOpen}
-          onClose={() => setIsCSVUploadOpen(false)}
-          projectId={project.id}
-          onUploadSuccess={handleCSVUploadSuccess}
-        />
-      </Suspense>
+      <Dialog open={isCSVUploadOpen} onOpenChange={setIsCSVUploadOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upload Prospects</DialogTitle>
+          </DialogHeader>
+          <SimpleCSVUpload
+            projectId={project.id}
+            onUploadSuccess={handleCSVUploadSuccess}
+            onClose={() => setIsCSVUploadOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

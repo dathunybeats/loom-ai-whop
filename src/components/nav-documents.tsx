@@ -4,8 +4,8 @@ import {
   FolderIcon,
   MoreHorizontalIcon,
   ShareIcon,
-  type LucideIcon,
 } from "lucide-react"
+import { type ComponentType } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -31,7 +31,7 @@ export function NavDocuments({
   items: {
     name: string
     url: string
-    icon: LucideIcon
+    icon: ComponentType<any>
   }[]
 }) {
   const { isMobile } = useSidebar()

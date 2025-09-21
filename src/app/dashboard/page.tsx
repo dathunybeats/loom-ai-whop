@@ -91,21 +91,21 @@ export default async function Dashboard({
   }
 
   // Server-side initial plan for instant modal decisions
-  const { data: sub } = await supabase
-    .from('user_subscriptions')
+  const { data: userData } = await supabase
+    .from('users')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .maybeSingle()
 
-  const initialPlan = sub
+  const initialPlan = userData
     ? {
-        status: sub.status as string,
-        videosRemaining: sub.plan_id === 'trial'
-          ? Math.max(0, (sub.videos_limit ?? 0) - (sub.videos_used ?? 0))
+        status: userData.subscription_status as string,
+        videosRemaining: userData.plan_id === 'trial'
+          ? Math.max(0, (userData.videos_limit ?? 0) - (userData.videos_used ?? 0))
           : null,
-        planName: sub.plan_id === 'trial' ? 'Free Trial' : sub.plan_id,
-        welcomedAt: sub.welcomed_at ?? null,
-        onboardingCompleted: sub.onboarding_completed ?? false
+        planName: userData.plan_id === 'trial' ? 'Free Trial' : userData.plan_id,
+        welcomedAt: userData.welcomed_at ?? null,
+        onboardingCompleted: userData.onboarding_completed ?? false
       }
     : undefined
 

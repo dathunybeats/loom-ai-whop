@@ -5,6 +5,7 @@ import { WebVitalsProvider } from '@/components/WebVitalsProvider'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ErrorBoundary, AsyncErrorBoundary } from '@/components/error-boundary'
+import { HeroUIProvider } from "@heroui/react"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,17 +46,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ErrorBoundary>
-          <AsyncErrorBoundary>
-            <AuthProvider>
-              <WebVitalsProvider>
-                <SubscriptionProvider>
-                  {children}
-                </SubscriptionProvider>
-              </WebVitalsProvider>
-            </AuthProvider>
-          </AsyncErrorBoundary>
-        </ErrorBoundary>
+        <HeroUIProvider>
+          <ErrorBoundary>
+            <AsyncErrorBoundary>
+              <AuthProvider>
+                <WebVitalsProvider>
+                  <SubscriptionProvider>
+                    {children}
+                  </SubscriptionProvider>
+                </WebVitalsProvider>
+              </AuthProvider>
+            </AsyncErrorBoundary>
+          </ErrorBoundary>
+        </HeroUIProvider>
       </body>
     </html>
   );
