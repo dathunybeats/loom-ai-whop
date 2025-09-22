@@ -1,11 +1,12 @@
 "use client"
 
-import { MailIcon, PlusCircleIcon, type LucideIcon } from "lucide-react"
+import { PlusCircleIcon, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -21,6 +22,7 @@ export function NavMain({
     title: string
     url: string
     icon?: LucideIcon
+    isUpcoming?: boolean
   }[]
 }) {
   const pathname = usePathname()
@@ -42,9 +44,9 @@ export function NavMain({
             <SidebarMenuButton
               asChild
               tooltip="Quick Create"
-              className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+              className="bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground flex-1"
             >
-              <Link 
+              <Link
                 href="/projects/new"
                 onMouseEnter={() => router.prefetch('/projects/new')}
                 className="transition-colors duration-75"
@@ -53,32 +55,35 @@ export function NavMain({
                 <span>Quick Create</span>
               </Link>
             </SidebarMenuButton>
-            <Button
-              size="icon"
-              className="h-9 w-9 shrink-0 group-data-[collapsible=icon]:opacity-0"
-              variant="outline"
-            >
-              <MailIcon />
-              <span className="sr-only">Inbox</span>
-            </Button>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton 
-                asChild 
-                tooltip={item.title}
+              <SidebarMenuButton
+                asChild={!item.isUpcoming}
+                tooltip={item.isUpcoming ? `${item.title} (Coming Soon)` : item.title}
                 isActive={pathname === item.url}
+                className={item.isUpcoming ? "opacity-50 cursor-not-allowed" : ""}
               >
-                <Link 
-                  href={item.url}
-                  onMouseEnter={() => router.prefetch(item.url)}
-                  className="transition-colors duration-75"
-                >
-                  {item.icon && <item.icon />}
-                  <span>{item.title}</span>
-                </Link>
+                {item.isUpcoming ? (
+                  <div className="flex items-center gap-2 w-full">
+                    {item.icon && <item.icon />}
+                    <span className="flex-1">{item.title}</span>
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">
+                      Soon
+                    </Badge>
+                  </div>
+                ) : (
+                  <Link
+                    href={item.url}
+                    onMouseEnter={() => router.prefetch(item.url)}
+                    className="transition-colors duration-75"
+                  >
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                  </Link>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

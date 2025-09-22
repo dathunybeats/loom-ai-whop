@@ -52,11 +52,13 @@ const data = {
       title: "Voice Samples",
       url: "#",
       icon: FileText,
+      isUpcoming: true,
     },
     {
       title: "Analytics",
       url: "#",
       icon: BarChart3,
+      isUpcoming: true,
     },
   ],
   navClouds: [
@@ -140,25 +142,40 @@ const data = {
       name: "Voice Library",
       url: "#",
       icon: Database,
+      isUpcoming: true,
     },
     {
       name: "Reports",
       url: "#",
       icon: Clipboard,
+      isUpcoming: true,
     },
     {
       name: "Templates",
       url: "#",
       icon: FileText,
+      isUpcoming: true,
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, userData, loading } = useSubscription()
+  const [isClient, setIsClient] = React.useState(false)
+
+  // Ensure we only show dynamic user data after hydration
+  React.useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Use real user data from SubscriptionContext or fallback to default
   const displayUser = React.useMemo(() => {
+    // Always return fallback data during SSR and initial client render
+    if (!isClient) {
+      return data.user
+    }
+
+    // After hydration, use real user data if available
     if (user) {
       return {
         name: userData?.full_name || user.user_metadata?.full_name || "User",
@@ -167,7 +184,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     }
     return data.user
-  }, [user, userData])
+  }, [user, userData, isClient])
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>

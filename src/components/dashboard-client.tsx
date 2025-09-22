@@ -18,7 +18,7 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ children, initialPlan }: DashboardClientProps) {
-  const { user, planInfo, loading } = useSubscription()
+  const { user, userData, planInfo, loading } = useSubscription()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -28,12 +28,6 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
 
   // Check URL parameters for post-payment redirect
   const upgraded = searchParams.get('upgraded')
-
-  // Helper function to check if user has completed trial onboarding
-  const hasCompletedTrialOnboarding = () => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem(`trial_completed_${user?.id}`) === 'true'
-  }
 
   // No fallback fetch; rely on initialPlan (server-provided) or context
 
@@ -85,9 +79,9 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
     setShowUpgradeModal(false)
 
     if (isPaid) {
-      // Paid users: show welcome once if not yet welcomed
-      const welcomedAt = planInfo?.welcomedAt ?? (effectivePlan as any).welcomedAt ?? null
-      if (!welcomedAt) {
+      // Paid users: show welcome once if onboarding not completed
+      const onboardingCompleted = userData?.onboarding_completed ?? false
+      if (!onboardingCompleted) {
         setShowWelcomeModal(true)
       }
       return
@@ -117,10 +111,6 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
 
   const handleTrialComplete = () => {
     setShowTrialModal(false)
-    // Mark trial onboarding as completed
-    if (user?.id) {
-      localStorage.setItem(`trial_completed_${user.id}`, 'true')
-    }
     setShowUpgradeModal(true)
   }
 
@@ -132,14 +122,7 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
 
   const handleWelcomeClose = () => {
     setShowWelcomeModal(false)
-    // Mark welcomed on server (best-effort)
-    try {
-      fetch('/api/subscription/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ welcomed: true })
-      })
-    } catch {}
+    // The WelcomeModal will handle updating the onboarding status via its own API call
   }
 
   return (

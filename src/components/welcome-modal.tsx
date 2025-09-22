@@ -13,7 +13,8 @@ import {
   Share2,
   Sparkles,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  X
 } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 
@@ -25,6 +26,27 @@ interface WelcomeModalProps {
 
 export function WelcomeModal({ isOpen, onClose, planName = "Pro" }: WelcomeModalProps) {
   const { planInfo } = useSubscription()
+
+  const handleOnboardingComplete = async () => {
+    try {
+      // Update onboarding status in database
+      const response = await fetch('/api/user/onboarding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        console.error('Failed to update onboarding status')
+      }
+    } catch (error) {
+      console.error('Error updating onboarding status:', error)
+    }
+
+    // Close the modal
+    onClose()
+  }
 
   const planFeatures = {
     'Basic': [
@@ -57,7 +79,7 @@ export function WelcomeModal({ isOpen, onClose, planName = "Pro" }: WelcomeModal
   ]
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose} modal>
+    <Dialog open={isOpen} onOpenChange={handleOnboardingComplete} modal>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="text-center space-y-4">
@@ -157,14 +179,6 @@ export function WelcomeModal({ isOpen, onClose, planName = "Pro" }: WelcomeModal
             </CardContent>
           </Card>
 
-          {/* CTA Button */}
-          <div className="text-center">
-            <Button onClick={onClose} size="lg" className="px-8">
-              <Video className="mr-2 h-4 w-4" />
-              Start Creating Videos
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
 
           {/* Support Info */}
           <div className="text-center text-sm text-muted-foreground border-t pt-4">
