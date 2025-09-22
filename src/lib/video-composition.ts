@@ -35,11 +35,13 @@ export async function composePersonalizedVideo(
     const hasFFmpeg = await checkFFmpegAvailable();
 
     if (!hasFFmpeg) {
-      console.log('⚠️  FFmpeg not available - using base video as fallback');
-      console.log('📋 Video will show base video without personalized website overlay');
-      console.log('💡 Screenshots are still captured and stored for future use');
+      console.log('⚠️  FFmpeg not available - using base video for now');
+      console.log('📋 To enable real video composition:');
+      console.log('   1. Install FFmpeg: https://ffmpeg.org/download.html');
+      console.log('   2. Add FFmpeg to your PATH');
+      console.log('   3. Restart your development server');
 
-      // Return base video URL directly - it should already be accessible
+      // Return base video for now
       return {
         success: true,
         outputPath: options.baseVideoPath,
@@ -84,36 +86,26 @@ export async function composePersonalizedVideo(
  */
 async function checkFFmpegAvailable(): Promise<boolean> {
   try {
-    // Always try to use installed FFmpeg first (both dev and production)
-    try {
-      const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-      ffmpeg.setFfmpegPath(ffmpegPath);
-      console.log('✅ Using installed FFmpeg:', ffmpegPath);
-
-      // Test the installed FFmpeg
-      const { exec } = require('child_process');
-      const util = require('util');
-      const execPromise = util.promisify(exec);
-      await execPromise(`"${ffmpegPath}" -version`);
-
-      return true;
-    } catch (installError) {
-      console.log('⚠️ @ffmpeg-installer/ffmpeg failed:', installError);
+    // Try to use installed FFmpeg first
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+        ffmpeg.setFfmpegPath(ffmpegPath);
+        console.log('✅ Using installed FFmpeg for production:', ffmpegPath);
+        return true;
+      } catch (installError) {
+        console.log('⚠️ @ffmpeg-installer/ffmpeg not available, trying system FFmpeg');
+      }
     }
 
-    // Fallback to system FFmpeg only in development
-    if (process.env.NODE_ENV !== 'production') {
-      const { exec } = require('child_process');
-      const util = require('util');
-      const execPromise = util.promisify(exec);
+    // Fallback to system FFmpeg
+    const { exec } = require('child_process');
+    const util = require('util');
+    const execPromise = util.promisify(exec);
 
-      await execPromise('ffmpeg -version');
-      console.log('✅ Using system FFmpeg');
-      return true;
-    }
-
-    console.log('❌ FFmpeg not available in production');
-    return false;
+    await execPromise('ffmpeg -version');
+    console.log('✅ Using system FFmpeg');
+    return true;
   } catch (error) {
     console.log('❌ FFmpeg not available:', error);
     return false;
