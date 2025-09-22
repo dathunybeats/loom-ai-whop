@@ -42,13 +42,25 @@ export async function GET(request: NextRequest) {
             try {
               console.log(`Attempt ${attempt}: Creating/updating user record for:`, user.id)
 
-              // Use upsert to handle both creation and updates
+              // Check if user already exists first
+              const { data: existingUser } = await supabase
+                .from('users')
+                .select('id, plan_id, subscription_status')
+                .eq('id', user.id)
+                .single()
+
+              if (existingUser) {
+                console.log('User already exists, skipping user creation:', existingUser)
+                return existingUser
+              }
+
+              // Only create new user if they don't exist
               const trialEnd = new Date()
               trialEnd.setDate(trialEnd.getDate() + 7) // 7-day trial
 
-              const { error: upsertError, data: userData } = await supabase
+              const { error: insertError, data: userData } = await supabase
                 .from('users')
-                .upsert({
+                .insert({
                   id: user.id,
                   email: user.email,
                   full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
@@ -61,15 +73,14 @@ export async function GET(request: NextRequest) {
                   videos_used: 0,
                   billing_period: 'trial',
                   updated_at: new Date().toISOString()
-                }, {
-                  onConflict: 'id',
-                  ignoreDuplicates: false
                 })
                 .select()
                 .single()
 
+              const upsertError = insertError
+
               if (upsertError) {
-                console.error(`Attempt ${attempt} failed - Database error saving user:`, {
+                console.error(`Attempt ${attempt} failed - Database error creating user:`, {
                   error: upsertError,
                   code: upsertError.code,
                   details: upsertError.details,
@@ -85,7 +96,7 @@ export async function GET(request: NextRequest) {
                   continue
                 }
               } else {
-                console.log('Successfully created/updated user record:', userData)
+                console.log('Successfully created new user record:', userData)
                 return userData
               }
             } catch (setupError) {
@@ -97,7 +108,7 @@ export async function GET(request: NextRequest) {
               }
             }
           }
-          console.error('All user creation attempts failed')
+          console.error('All user creation/lookup attempts failed')
           return null
         }
 
