@@ -1,10 +1,12 @@
-import AWS from 'aws-sdk';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
-// Configure AWS SDK (you'll set these in Vercel environment variables)
-const lambda = new AWS.Lambda({
+// Configure AWS SDK v3 (you'll set these in Vercel environment variables)
+const lambda = new LambdaClient({
   region: process.env.AWS_REGION || 'us-east-1',
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
 });
 
 export interface LambdaVideoCompositionRequest {
@@ -33,21 +35,21 @@ export async function callLambdaVideoComposition(
   try {
     console.log('🚀 Calling AWS Lambda for video composition...', request);
 
-    const params = {
+    const command = new InvokeCommand({
       FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME || 'video-composition',
       InvocationType: 'RequestResponse', // Synchronous call
       Payload: JSON.stringify({
         body: JSON.stringify(request)
       })
-    };
+    });
 
-    const result = await lambda.invoke(params).promise();
+    const result = await lambda.send(command);
 
     if (result.StatusCode !== 200) {
       throw new Error(`Lambda invocation failed with status: ${result.StatusCode}`);
     }
 
-    const payload = JSON.parse(result.Payload as string);
+    const payload = JSON.parse(new TextDecoder().decode(result.Payload));
 
     if (payload.statusCode !== 200) {
       throw new Error(`Lambda function failed: ${payload.body}`);
@@ -74,15 +76,15 @@ export async function callLambdaVideoComposition(
  */
 export async function testLambdaConnection(): Promise<boolean> {
   try {
-    const params = {
+    const command = new InvokeCommand({
       FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME || 'video-composition',
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         body: JSON.stringify({ test: true })
       })
-    };
+    });
 
-    const result = await lambda.invoke(params).promise();
+    const result = await lambda.send(command);
     console.log('✅ Lambda connection test successful');
     return result.StatusCode === 200;
 

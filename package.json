@@ -14,6 +14,7 @@
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.894.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@headlessui/react": "^2.2.7",
     "@heroicons/react": "^2.2.0",
