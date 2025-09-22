@@ -14,8 +14,10 @@
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@headlessui/react": "^2.2.7",
     "@heroicons/react": "^2.2.0",
+    "@heroui/input-otp": "^2.1.26",
     "@heroui/react": "^2.8.4",
     "@heroui/theme": "^2.4.22",
     "@hugeicons/core-free-icons": "^1.0.17",

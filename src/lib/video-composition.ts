@@ -86,13 +86,28 @@ export async function composePersonalizedVideo(
  */
 async function checkFFmpegAvailable(): Promise<boolean> {
   try {
+    // Try to use installed FFmpeg first
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+        ffmpeg.setFfmpegPath(ffmpegPath);
+        console.log('✅ Using installed FFmpeg for production:', ffmpegPath);
+        return true;
+      } catch (installError) {
+        console.log('⚠️ @ffmpeg-installer/ffmpeg not available, trying system FFmpeg');
+      }
+    }
+
+    // Fallback to system FFmpeg
     const { exec } = require('child_process');
     const util = require('util');
     const execPromise = util.promisify(exec);
-    
+
     await execPromise('ffmpeg -version');
+    console.log('✅ Using system FFmpeg');
     return true;
   } catch (error) {
+    console.log('❌ FFmpeg not available:', error);
     return false;
   }
 }
