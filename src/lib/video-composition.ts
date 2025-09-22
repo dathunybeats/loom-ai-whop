@@ -35,17 +35,14 @@ export async function composePersonalizedVideo(
     const hasFFmpeg = await checkFFmpegAvailable();
 
     if (!hasFFmpeg) {
-      console.log('⚠️  FFmpeg not available - using base video for now');
-      console.log('📋 To enable real video composition:');
-      console.log('   1. Install FFmpeg: https://ffmpeg.org/download.html');
-      console.log('   2. Add FFmpeg to your PATH');
-      console.log('   3. Restart your development server');
+      console.log('❌ FFmpeg not available - cannot compose personalized videos');
+      console.log('📋 FFmpeg is required for video composition');
+      console.log('🔧 Ensure ffmpeg-static package is properly installed');
 
-      // Return base video for now
+      // Return error instead of fallback since you require FFmpeg
       return {
-        success: true,
-        outputPath: options.baseVideoPath,
-        duration: options.duration || 30,
+        success: false,
+        error: 'FFmpeg not available - video composition requires FFmpeg to create personalized overlays'
       };
     }
 
@@ -86,28 +83,44 @@ export async function composePersonalizedVideo(
  */
 async function checkFFmpegAvailable(): Promise<boolean> {
   try {
-    // Try to use installed FFmpeg first
-    if (process.env.NODE_ENV === 'production') {
-      try {
-        const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+    // Always try to use static FFmpeg first (both dev and production)
+    try {
+      const ffmpegPath = require('ffmpeg-static');
+      if (ffmpegPath) {
         ffmpeg.setFfmpegPath(ffmpegPath);
-        console.log('✅ Using installed FFmpeg for production:', ffmpegPath);
+        console.log('✅ Using static FFmpeg binary:', ffmpegPath);
+
+        // Test the static FFmpeg
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execPromise = util.promisify(exec);
+        await execPromise(`"${ffmpegPath}" -version`);
+
         return true;
-      } catch (installError) {
-        console.log('⚠️ @ffmpeg-installer/ffmpeg not available, trying system FFmpeg');
+      }
+    } catch (staticError) {
+      console.log('⚠️ ffmpeg-static failed:', staticError);
+    }
+
+    // Fallback to system FFmpeg (development only)
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execPromise = util.promisify(exec);
+
+        await execPromise('ffmpeg -version');
+        console.log('✅ Using system FFmpeg (development)');
+        return true;
+      } catch (systemError) {
+        console.log('⚠️ System FFmpeg not available:', systemError);
       }
     }
 
-    // Fallback to system FFmpeg
-    const { exec } = require('child_process');
-    const util = require('util');
-    const execPromise = util.promisify(exec);
-
-    await execPromise('ffmpeg -version');
-    console.log('✅ Using system FFmpeg');
-    return true;
+    console.log('❌ No FFmpeg available');
+    return false;
   } catch (error) {
-    console.log('❌ FFmpeg not available:', error);
+    console.log('❌ FFmpeg check failed:', error);
     return false;
   }
 }
