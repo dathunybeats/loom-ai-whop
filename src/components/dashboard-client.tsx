@@ -79,9 +79,9 @@ export function DashboardClient({ children, initialPlan }: DashboardClientProps)
     setShowUpgradeModal(false)
 
     if (isPaid) {
-      // Paid users: show welcome once if onboarding not completed
-      const onboardingCompleted = userData?.onboarding_completed ?? false
-      if (!onboardingCompleted) {
+      // Paid users: show welcome once if not welcomed yet (simpler check)
+      const welcomedAt = userData?.welcomed_at ?? effectivePlan?.welcomedAt ?? null
+      if (!welcomedAt) {
         setShowWelcomeModal(true)
       }
       return

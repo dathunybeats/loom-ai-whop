@@ -20,10 +20,11 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Updating onboarding status for user:', user.id)
 
-    // Update the user's onboarding_completed status
+    // Update the user's welcomed_at status (simpler approach)
     const { error } = await supabase
       .from('users')
       .update({
+        welcomed_at: new Date().toISOString(),
         onboarding_completed: true,
         updated_at: new Date().toISOString()
       })
