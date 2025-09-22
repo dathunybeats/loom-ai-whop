@@ -83,14 +83,14 @@ export async function composePersonalizedVideo(
  */
 async function checkFFmpegAvailable(): Promise<boolean> {
   try {
-    // Always try to use static FFmpeg first (both dev and production)
+    // Always try to use @ffmpeg-installer/ffmpeg first (both dev and production)
     try {
-      const ffmpegPath = require('ffmpeg-static');
+      const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
       if (ffmpegPath) {
         ffmpeg.setFfmpegPath(ffmpegPath);
-        console.log('✅ Using static FFmpeg binary:', ffmpegPath);
+        console.log('✅ Using @ffmpeg-installer/ffmpeg binary:', ffmpegPath);
 
-        // Test the static FFmpeg
+        // Test the FFmpeg binary
         const { exec } = require('child_process');
         const util = require('util');
         const execPromise = util.promisify(exec);
@@ -98,8 +98,8 @@ async function checkFFmpegAvailable(): Promise<boolean> {
 
         return true;
       }
-    } catch (staticError) {
-      console.log('⚠️ ffmpeg-static failed:', staticError);
+    } catch (installerError) {
+      console.log('⚠️ @ffmpeg-installer/ffmpeg failed:', installerError);
     }
 
     // Fallback to system FFmpeg (development only)

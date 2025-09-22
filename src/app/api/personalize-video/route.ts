@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { captureWebsiteScreenshot, enhancedWebScrape, captureWebsiteWithScrolling, saveScreenshotToStorage } from '@/lib/website-screenshot';
 import { composePersonalizedVideo, composePersonalizedVideoReal, uploadComposedVideo } from '@/lib/video-composition';
+import { callLambdaVideoComposition } from '@/lib/aws-lambda-client';
 import path from 'path';
 import os from 'os';
 
@@ -166,28 +167,27 @@ export async function POST(request: NextRequest): Promise<NextResponse<Personali
         let personalizedVideoUrl: string;
 
         try {
-          console.log(`🔄 Processing REAL video composition...`);
+          console.log(`🔄 Processing video composition via AWS Lambda...`);
           console.log(`📸 Screenshot URL: ${screenshotUrl}`);
           console.log(`🎯 Personalizing for: ${prospect.first_name}`);
           console.log(`📄 Website: ${scrapeResult.metadata?.title || 'Unknown'}`);
 
-          // Use video composition (will check for FFmpeg availability)
-          const compositionResult = await composePersonalizedVideo({
-            baseVideoPath: project.base_video_url,
-            backgroundImagePath: screenshotUrl,
-            outputPath: `/tmp/personalized-${prospect.id}-${Date.now()}.mp4`,
+          // Use AWS Lambda for video composition (replaces local FFmpeg)
+          const compositionResult = await callLambdaVideoComposition({
+            baseVideoUrl: project.base_video_url,
+            backgroundImageUrl: screenshotUrl,
             position: position,
             size: size,
             duration: 30,
             projectId: projectId
           });
 
-          if (compositionResult.success && compositionResult.outputPath) {
-            personalizedVideoUrl = compositionResult.outputPath;
-            console.log('✅ REAL video composition completed successfully!');
+          if (compositionResult.success && compositionResult.videoUrl) {
+            personalizedVideoUrl = compositionResult.videoUrl;
+            console.log('✅ AWS Lambda video composition completed successfully!');
             console.log(`🎬 Personalized Video URL: ${personalizedVideoUrl}`);
           } else {
-            throw new Error(compositionResult.error || 'Video composition failed');
+            throw new Error(compositionResult.error || 'Lambda video composition failed');
           }
 
         } catch (compositionError) {

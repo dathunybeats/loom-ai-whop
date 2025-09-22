@@ -1,0 +1,14 @@
+{
+  "name": "video-composition-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda function for FFmpeg video composition",
+  "main": "index.js",
+  "scripts": {
+    "build": "zip -r function.zip .",
+    "deploy": "aws lambda update-function-code --function-name video-composition --zip-file fileb://function.zip"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.894.0",
+    "fluent-ffmpeg": "^2.1.3"
+  }
+}
