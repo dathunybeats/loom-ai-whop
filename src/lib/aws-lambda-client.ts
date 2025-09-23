@@ -36,7 +36,7 @@ export async function callLambdaVideoComposition(
     console.log('🚀 Calling AWS Lambda for video composition...', request);
 
     const command = new InvokeCommand({
-      FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME || 'video-composition',
+      FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_FUNCTION_NAME || 'video-composition',
       InvocationType: 'RequestResponse', // Synchronous call
       Payload: JSON.stringify({
         body: JSON.stringify(request)
@@ -77,7 +77,7 @@ export async function callLambdaVideoComposition(
 export async function testLambdaConnection(): Promise<boolean> {
   try {
     const command = new InvokeCommand({
-      FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME || 'video-composition',
+      FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_FUNCTION_NAME || 'video-composition',
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify({
         body: JSON.stringify({ test: true })
