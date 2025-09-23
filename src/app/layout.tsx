@@ -60,6 +60,7 @@ export default function RootLayout({
             </AsyncErrorBoundary>
           </ErrorBoundary>
         </HeroUIProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
