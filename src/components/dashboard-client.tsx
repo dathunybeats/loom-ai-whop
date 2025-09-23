@@ -16,8 +16,14 @@ export function DashboardClient({ children }: DashboardClientProps) {
   useEffect(() => {
     if (!user || !planInfo) return
 
-    // Show upgrade modal only for non-active subscriptions
-    if (planInfo.status !== 'active') {
+    // Only show upgrade modal when user actually needs to upgrade:
+    // 1. Trial user with 0 videos remaining
+    // 2. Paid subscription is inactive/expired (but not trial status)
+    const needsUpgrade =
+      (planInfo.status === 'trial' && planInfo.videosRemaining === 0) || // Trial exhausted
+      (planInfo.status !== 'active' && planInfo.status !== 'trial') // Paid plan inactive
+
+    if (needsUpgrade) {
       setShowUpgradeModal(true)
     }
   }, [user, planInfo])

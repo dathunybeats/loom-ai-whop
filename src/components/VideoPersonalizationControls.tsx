@@ -7,6 +7,9 @@ import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
+import { Alert, Button as HeroButton } from "@heroui/react"
+import { useSubscription } from '@/contexts/SubscriptionContext'
+import { useRouter } from 'next/navigation'
 import VideoLayoutDemo from '@/components/VideoLayoutDemo'
 import {
   Play,
@@ -17,7 +20,8 @@ import {
   XCircle,
   Clock,
   Video,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Crown
 } from 'lucide-react'
 
 export interface VideoPersonalizationSettings {
@@ -60,19 +64,37 @@ export function VideoPersonalizationControls({
   isProcessing,
   processingProgress
 }: VideoPersonalizationControlsProps) {
+  const { planInfo, canCreateVideo } = useSubscription()
+  const router = useRouter()
+
   const [settings, setSettings] = useState<VideoPersonalizationSettings>({
     position: 'bottom-right',
     size: 200,
     useAudioOnly: false
   })
 
+  const handleUpgrade = () => {
+    router.push('/pricing')
+  }
+
   const handleStartPreview = async () => {
+    if (!canCreateVideo) {
+      return
+    }
     await onStartPreview(settings)
   }
 
   const handleStartPersonalization = async () => {
+    if (!canCreateVideo) {
+      return
+    }
     await onStartPersonalization(settings, false)
   }
+
+  // Check if user needs to upgrade
+  const needsUpgrade = !planInfo?.isActive || (planInfo?.status === 'trial' && planInfo?.videosRemaining === 0)
+  const isTrialUser = planInfo?.status === 'trial'
+  const videosLeft = planInfo?.videosRemaining || 0
 
   return (
     <div className="space-y-6">
@@ -153,7 +175,7 @@ export function VideoPersonalizationControls({
         <CardContent>
           <Button
             onClick={handleStartPreview}
-            disabled={isProcessing}
+            disabled={isProcessing || needsUpgrade}
             variant="outline"
             className="w-full"
           >
@@ -202,6 +224,42 @@ export function VideoPersonalizationControls({
         </Card>
       )}
 
+      {/* Subscription Alert */}
+      {needsUpgrade && (
+        <Alert
+          color="warning"
+          description={
+            isTrialUser && videosLeft === 0
+              ? "You've used all 5 free trial videos. Upgrade to create unlimited personalized videos."
+              : "Upgrade to a paid plan to create unlimited personalized videos."
+          }
+          endContent={
+            <HeroButton color="warning" size="sm" variant="flat" onPress={handleUpgrade}>
+              <Crown className="h-3 w-3 mr-1" />
+              Upgrade
+            </HeroButton>
+          }
+          title={isTrialUser && videosLeft === 0 ? "Free trial complete" : "Subscription required"}
+          variant="faded"
+        />
+      )}
+
+      {/* Trial Status Alert */}
+      {isTrialUser && videosLeft > 0 && (
+        <Alert
+          color="primary"
+          description={`You have ${videosLeft} free videos remaining. Upgrade anytime for unlimited access.`}
+          endContent={
+            <HeroButton color="primary" size="sm" variant="flat" onPress={handleUpgrade}>
+              <Crown className="h-3 w-3 mr-1" />
+              Upgrade
+            </HeroButton>
+          }
+          title="Free trial active"
+          variant="faded"
+        />
+      )}
+
       {/* Main Action */}
       <Card>
         <CardHeader>
@@ -230,7 +288,7 @@ export function VideoPersonalizationControls({
 
             <Button
               onClick={handleStartPersonalization}
-              disabled={isProcessing || prospectCount === 0}
+              disabled={isProcessing || prospectCount === 0 || needsUpgrade}
               className="w-full"
               size="lg"
             >
