@@ -6,6 +6,7 @@ import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ErrorBoundary, AsyncErrorBoundary } from '@/components/error-boundary'
 import { HeroUIProvider } from "@heroui/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
