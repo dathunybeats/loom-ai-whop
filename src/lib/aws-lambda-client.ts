@@ -33,10 +33,14 @@ export async function callLambdaVideoComposition(
   request: LambdaVideoCompositionRequest
 ): Promise<LambdaVideoCompositionResult> {
   try {
+    const functionName = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_FUNCTION_NAME || 'video-composition';
     console.log('🚀 Calling AWS Lambda for video composition...', request);
+    console.log('🔧 Function name resolved to:', functionName);
+    console.log('🔧 AWS_LAMBDA_FUNCTION_NAME:', process.env.AWS_LAMBDA_FUNCTION_NAME);
+    console.log('🔧 LAMBDA_FUNCTION_NAME:', process.env.LAMBDA_FUNCTION_NAME);
 
     const command = new InvokeCommand({
-      FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_FUNCTION_NAME || 'video-composition',
+      FunctionName: functionName,
       InvocationType: 'RequestResponse', // Synchronous call
       Payload: JSON.stringify({
         body: JSON.stringify(request)
