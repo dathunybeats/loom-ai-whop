@@ -1,12 +1,13 @@
 "use client"
 
 import { PlusCircleIcon, type LucideIcon } from "lucide-react"
+import { ComponentType } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Chip } from "@heroui/react"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -21,7 +22,7 @@ export function NavMain({
   items: {
     title: string
     url: string
-    icon?: LucideIcon
+    icon?: LucideIcon | ComponentType<{ className?: string }>
     isUpcoming?: boolean
   }[]
 }) {
@@ -70,9 +71,9 @@ export function NavMain({
                   <div className="flex items-center gap-2 w-full">
                     {item.icon && <item.icon />}
                     <span className="flex-1">{item.title}</span>
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">
+                    <Chip color="danger" size="sm" className="scale-75">
                       Soon
-                    </Badge>
+                    </Chip>
                   </div>
                 ) : (
                   <Link

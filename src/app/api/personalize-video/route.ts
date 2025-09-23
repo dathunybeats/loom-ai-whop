@@ -298,6 +298,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<Personali
       } else {
         console.log(`✅ Successfully updated project stats: ${newCount} total videos`);
       }
+
+      // Update user's videos_used count
+      console.log(`📊 Incrementing user video usage by ${processed} videos`);
+
+      // Get current user data
+      const { data: currentUser, error: getUserError } = await supabase
+        .from('users')
+        .select('videos_used')
+        .eq('id', user.id)
+        .single();
+
+      if (getUserError) {
+        console.error('❌ Failed to get current user video count:', getUserError);
+      } else {
+        const newVideosUsed = (currentUser.videos_used || 0) + processed;
+
+        const { error: userUpdateError } = await supabase
+          .from('users')
+          .update({
+            videos_used: newVideosUsed
+          })
+          .eq('id', user.id);
+
+        if (userUpdateError) {
+          console.error('❌ Failed to update user video count:', userUpdateError);
+        } else {
+          console.log(`✅ Successfully incremented user video usage to ${newVideosUsed} (+${processed})`);
+        }
+      }
     }
 
     return NextResponse.json({

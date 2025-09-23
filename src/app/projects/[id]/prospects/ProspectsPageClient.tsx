@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import LogoutButton from '@/components/LogoutButton'
 import { ProspectsDataTable, type Prospect } from '@/components/ProspectsDataTable'
 import { SimpleCSVUpload } from '@/components/SimpleCSVUpload'
 import { createClient } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { DashboardLayout } from '@/components/dashboard-layout'
 import { Plus, Upload } from 'lucide-react'
 import type { Database } from '@/lib/database.types'
 
@@ -101,42 +101,39 @@ export default function ProspectsPageClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <Link href={`/projects/${project.id}`} className="text-indigo-600 hover:text-indigo-500 text-sm">
-                ← Back to Project
-              </Link>
-              <h1 className="text-3xl font-bold text-gray-900 mt-2">
-                Prospects - {project.name}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {prospects.length} total prospects
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => setIsCSVUploadOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Upload CSV
-              </Button>
-              <LogoutButton />
-            </div>
+    <DashboardLayout>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <Link href={`/projects/${project.id}`} className="text-primary hover:text-primary/80 text-sm">
+              ← Back to Project
+            </Link>
+            <h1 className="text-3xl font-bold text-foreground mt-2">
+              Prospects - {project.name}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {prospects.length} total prospects
+            </p>
           </div>
+          <div className="flex items-center space-x-4">
+            <Button
+              onClick={() => setIsCSVUploadOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Upload CSV
+            </Button>
+          </div>
+        </div>
 
-          {/* Data Table */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <ProspectsDataTable
-              data={prospects}
-              onAddProspect={handleAddProspect}
-              onDeleteSelected={handleDeleteSelected}
-            />
-          </div>
+        {/* Data Table */}
+        <div className="bg-card border border-border rounded-lg p-6">
+          <ProspectsDataTable
+            data={prospects}
+            onAddProspect={handleAddProspect}
+            onDeleteSelected={handleDeleteSelected}
+          />
         </div>
       </div>
 
@@ -153,6 +150,6 @@ export default function ProspectsPageClient({
           />
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardLayout>
   )
 }

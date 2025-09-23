@@ -9,7 +9,7 @@ import { type ComponentType } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { Badge } from "@/components/ui/badge"
+import { Chip } from "@heroui/react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,9 +55,9 @@ export function NavDocuments({
                 <div className="flex items-center gap-2 w-full">
                   <item.icon />
                   <span className="flex-1">{item.name}</span>
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">
+                  <Chip color="danger" size="sm" className="scale-75">
                     Soon
-                  </Badge>
+                  </Chip>
                 </div>
               ) : (
                 <Link href={item.url}>

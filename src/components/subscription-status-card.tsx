@@ -4,10 +4,22 @@ import { useSubscription } from '@/contexts/SubscriptionContext'
 import { Progress } from "@heroui/react"
 import { Crown, Video, Zap, AlertTriangle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export function SubscriptionStatusCard() {
   const { planInfo, loading } = useSubscription()
   const router = useRouter()
+  const [progressValue, setProgressValue] = useState(0)
+
+  // Update progress value only when planInfo changes, not on every render
+  useEffect(() => {
+    if (planInfo?.status === 'trial' && planInfo?.videosUsed !== undefined && planInfo?.videosLimit) {
+      const totalVideos = planInfo.videosLimit
+      const videosUsed = planInfo.videosUsed || 0
+      const newProgressValue = (videosUsed / totalVideos) * 100
+      setProgressValue(newProgressValue)
+    }
+  }, [planInfo?.videosUsed, planInfo?.videosLimit, planInfo?.status])
 
   const handleUpgrade = () => {
     router.push('/pricing')
@@ -32,7 +44,7 @@ export function SubscriptionStatusCard() {
   // Active paid subscription (not trial)
   if (planInfo.status === 'active' && planInfo.planId !== 'trial') {
     return (
-      <div className="p-3 mx-2 mb-2 bg-black/5 border border-black/10 rounded-xl">
+      <div className="p-2 mx-2 mb-1 bg-black/5 border border-black/10 rounded-xl">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5">
             <Crown className="h-3 w-3 text-black" />
@@ -53,11 +65,10 @@ export function SubscriptionStatusCard() {
   // Trial user with videos remaining
   if (planInfo.status === 'trial' && planInfo.videosRemaining && planInfo.videosRemaining > 0) {
     const totalVideos = planInfo.videosLimit || 5
-    const videosUsed = totalVideos - planInfo.videosRemaining
-    const progressPercentage = (videosUsed / totalVideos) * 100
+    const videosUsed = planInfo.videosUsed || 0
 
     return (
-      <div className="p-3 mx-2 mb-2 bg-black/5 border border-black/10 rounded-xl">
+      <div className="p-2 mx-2 mb-1 bg-black/5 border border-black/10 rounded-xl">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5">
             <Zap className="h-3 w-3 text-black" />
@@ -75,7 +86,7 @@ export function SubscriptionStatusCard() {
           </div>
           <Progress
             size="sm"
-            value={progressPercentage}
+            value={progressValue}
             color="default"
             className="w-full h-1"
             classNames={{
@@ -97,12 +108,12 @@ export function SubscriptionStatusCard() {
   }
 
   // Trial exhausted or inactive subscription
-  const isTrialExhausted = planInfo.status === 'trial' && planInfo.videosRemaining === 0
+  const isTrialExhausted = planInfo.status === 'trial' && (planInfo.videosRemaining === 0 || planInfo.videosRemaining === null)
   const isInactive = planInfo.status !== 'active' && planInfo.status !== 'trial'
 
   if (isTrialExhausted || isInactive) {
     return (
-      <div className="p-3 mx-2 mb-2 bg-black/5 border border-black/10 rounded-xl">
+      <div className="p-2 mx-2 mb-1 bg-black/5 border border-black/10 rounded-xl">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="h-3 w-3 text-black" />
