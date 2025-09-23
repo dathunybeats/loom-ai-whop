@@ -142,7 +142,7 @@ export default function NewProjectPage() {
 
     try {
       const formData = new FormData()
-      formData.append('video', videoFile)
+      formData.append('file', videoFile)  // Changed from 'video' to 'file'
       formData.append('projectId', projectId)
 
       const response = await fetch('/api/upload-video', {
