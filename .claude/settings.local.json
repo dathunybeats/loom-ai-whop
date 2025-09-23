@@ -55,7 +55,8 @@
       "Bash(node:*)",
       "Bash(del /S /Q .next)",
       "Bash(if exist .next rmdir /S /Q .next)",
-      "mcp__supabase__get_logs"
+      "mcp__supabase__get_logs",
+      "Bash(npm i:*)"
     ],
     "deny": [],
     "ask": []

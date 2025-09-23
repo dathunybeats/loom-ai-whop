@@ -90,28 +90,9 @@ export default async function Dashboard({
     console.error('Error fetching projects:', error)
   }
 
-  // Server-side initial plan for instant modal decisions
-  const { data: userData } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  const initialPlan = userData
-    ? {
-        status: userData.subscription_status as string,
-        videosRemaining: userData.plan_id === 'trial'
-          ? Math.max(0, (userData.videos_limit ?? 0) - (userData.videos_used ?? 0))
-          : null,
-        planName: userData.plan_id === 'trial' ? 'Free Trial' : userData.plan_id,
-        welcomedAt: userData.welcomed_at ?? null,
-        onboardingCompleted: userData.onboarding_completed ?? false
-      }
-    : undefined
-
   return (
     <DashboardLayout>
-      <DashboardClient initialPlan={initialPlan}>
+      <DashboardClient>
         <div className="space-y-8">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>

@@ -54,30 +54,12 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
   }
 
   const getRestrictionMessage = () => {
-    if (!planInfo) {
-      return {
-        title: 'Get Started with Meraki Reach',
-        description: 'Choose a plan to start creating personalized videos',
-        icon: Crown,
-        variant: 'default' as const
-      }
-    }
-
-    if (planInfo.planName === 'Free Trial' && planInfo.videosRemaining === 0) {
-      return {
-        title: 'Trial Videos Exhausted',
-        description: `You've used all ${planInfo.planName === 'Free Trial' ? '5' : '0'} trial videos. Upgrade to continue creating unlimited videos.`,
-        icon: AlertTriangle,
-        variant: 'destructive' as const
-      }
-    }
-
-    if (!planInfo.isActive) {
+    if (!planInfo || !planInfo.isActive) {
       return {
         title: 'Subscription Required',
-        description: 'Your subscription has expired. Reactivate to continue creating videos.',
-        icon: Lock,
-        variant: 'destructive' as const
+        description: 'Choose a plan to start creating unlimited personalized videos with advanced features.',
+        icon: Crown,
+        variant: 'default' as const
       }
     }
 
@@ -97,11 +79,7 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
       <Card className="max-w-md w-full text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-              restriction.variant === 'destructive' 
-                ? 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' 
-                : 'bg-primary/10 text-primary'
-            }`}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary">
               <Icon className="h-8 w-8" />
             </div>
           </div>
@@ -111,23 +89,11 @@ export function VideoCreationGuard({ children, feature = 'create videos' }: Vide
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {planInfo && planInfo.planName === 'Free Trial' && (
-            <div className="bg-muted p-3 rounded-md">
-              <div className="text-sm font-medium mb-1">Trial Status</div>
-              <div className="flex items-center justify-between text-sm">
-                <span>Videos Used:</span>
-                <Badge variant="secondary">
-                  {planInfo.videosRemaining !== null ? 5 - planInfo.videosRemaining : 0}/5
-                </Badge>
-              </div>
-            </div>
-          )}
-          
           <Button onClick={handleUpgrade} className="w-full" size="lg">
             <Crown className="h-4 w-4 mr-2" />
-            {planInfo?.planName === 'Free Trial' ? 'Upgrade Plan' : 'Choose Plan'}
+            Choose Plan
           </Button>
-          
+
           <p className="text-xs text-muted-foreground">
             All plans include unlimited video creation and advanced features
           </p>
@@ -142,10 +108,7 @@ export function usePlanFeatures() {
   const { planInfo } = useSubscription()
   
   return {
-    canCreateVideos: planInfo?.isActive && (
-      planInfo.videosRemaining === null || 
-      (planInfo.videosRemaining !== null && planInfo.videosRemaining > 0)
-    ),
+    canCreateVideos: planInfo?.isActive,
     canAccessAnalytics: planInfo?.planId !== null, // Paid plans only
     canUseBulkImport: ['plan_N97PuJswksstF', 'plan_HeStJKVzCFSSa'].includes(planInfo?.planId || ''), // Pro & Agency
     canUseWhiteLabel: planInfo?.planId === 'plan_HeStJKVzCFSSa', // Agency only
