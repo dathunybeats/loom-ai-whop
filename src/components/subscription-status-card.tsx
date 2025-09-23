@@ -1,25 +1,30 @@
 'use client'
 
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { Progress } from "@heroui/react"
 import { Crown, Video, Zap, AlertTriangle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 export function SubscriptionStatusCard() {
   const { planInfo, loading } = useSubscription()
   const router = useRouter()
-  const [progressValue, setProgressValue] = useState(0)
+  const [shouldAnimate, setShouldAnimate] = useState(false)
+  const prevVideosUsedRef = useRef<number | undefined>(undefined)
+  const isFirstLoadRef = useRef(true)
 
-  // Update progress value only when planInfo changes, not on every render
   useEffect(() => {
-    if (planInfo?.status === 'trial' && planInfo?.videosUsed !== undefined && planInfo?.videosLimit) {
-      const totalVideos = planInfo.videosLimit
-      const videosUsed = planInfo.videosUsed || 0
-      const newProgressValue = (videosUsed / totalVideos) * 100
-      setProgressValue(newProgressValue)
+    if (planInfo?.status === 'trial' && planInfo?.videosUsed !== undefined) {
+      const currentVideosUsed = planInfo.videosUsed
+
+      // Animate on first load or when number increases
+      if (isFirstLoadRef.current || (prevVideosUsedRef.current !== undefined && currentVideosUsed > prevVideosUsedRef.current)) {
+        setShouldAnimate(true)
+        isFirstLoadRef.current = false
+      }
+
+      prevVideosUsedRef.current = currentVideosUsed
     }
-  }, [planInfo?.videosUsed, planInfo?.videosLimit, planInfo?.status])
+  }, [planInfo?.videosUsed, planInfo?.status])
 
   const handleUpgrade = () => {
     router.push('/pricing')
@@ -84,16 +89,12 @@ export function SubscriptionStatusCard() {
             <span>Videos used</span>
             <span className="font-medium">{videosUsed}/{totalVideos}</span>
           </div>
-          <Progress
-            size="sm"
-            value={progressValue}
-            color="default"
-            className="w-full h-1"
-            classNames={{
-              track: "bg-black/10",
-              indicator: "bg-black"
-            }}
-          />
+          <div className="w-full h-1 bg-black/10 rounded-full overflow-hidden">
+            <div
+              className={`h-full bg-black rounded-full ${shouldAnimate ? 'transition-all duration-1000 ease-out' : ''}`}
+              style={{ width: `${(videosUsed / totalVideos) * 100}%` }}
+            />
+          </div>
         </div>
 
         <button

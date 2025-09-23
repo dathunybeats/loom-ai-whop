@@ -183,7 +183,7 @@ export default async function Dashboard({
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-foreground">Recent Campaigns</h2>
-                <Link href="/projects" className="text-sm text-primary hover:text-primary/80">
+                <Link href="/projects" className="text-sm text-black hover:text-black/80 font-normal">
                   View all
                 </Link>
               </div>
@@ -200,20 +200,23 @@ export default async function Dashboard({
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-foreground">{project.name}</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground font-normal">
                           {project.prospects_count} prospects • {project.videos_generated} videos generated
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-foreground font-normal">
                         {new Date(project.created_at).toLocaleDateString()}
                       </span>
                       <Link
                         href={`/projects/${project.id}`}
-                        className="text-sm text-primary hover:text-primary/80 font-medium"
+                        className="text-sm text-black hover:text-black/80 font-normal flex items-center gap-1"
                       >
-                        View →
+                        View
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 16L16 12M16 12L12 8M16 12H8M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                       </Link>
                     </div>
                   </div>

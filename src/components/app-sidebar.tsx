@@ -15,8 +15,8 @@ import { useSubscription } from "@/contexts/SubscriptionContext"
 // Custom SVG Icons
 const DashboardIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="1" y="1" width="30" height="30" rx="5" stroke="currentColor" strokeWidth="2"/>
-    <path d="M2 18H9.53846C10.1097 18 10.6575 18.281 11.0615 18.7811C11.4654 19.2811 11.6923 19.9594 11.6923 20.6667C11.6923 22.0812 12.1462 23.4377 12.954 24.4379C13.7619 25.4381 14.8575 26 16 26C17.1425 26 18.2381 25.4381 19.046 24.4379C19.8538 23.4377 20.3077 22.0812 20.3077 20.6667C20.3077 19.9594 20.5346 19.2811 20.9385 18.7811C21.3425 18.281 21.8903 18 22.4615 18H30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <rect x="1" y="1" width="30" height="30" rx="5" stroke="currentColor" strokeWidth="2.5"/>
+    <path d="M2 18H9.53846C10.1097 18 10.6575 18.281 11.0615 18.7811C11.4654 19.2811 11.6923 19.9594 11.6923 20.6667C11.6923 22.0812 12.1462 23.4377 12.954 24.4379C13.7619 25.4381 14.8575 26 16 26C17.1425 26 18.2381 25.4381 19.046 24.4379C19.8538 23.4377 20.3077 22.0812 20.3077 20.6667C20.3077 19.9594 20.5346 19.2811 20.9385 18.7811C21.3425 18.281 21.8903 18 22.4615 18H30" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 
