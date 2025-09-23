@@ -41,3 +41,14 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+
+# Ignore Windows special devices
+nul
+
+# Ignore binaries and archives
+*.msi
+*.zip
+
+# Ignore build/output folders
+bin/
