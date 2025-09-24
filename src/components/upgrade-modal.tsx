@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Check, Crown, Zap, Building, ArrowRight, Sparkles } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface UpgradeModalProps {
   isOpen: boolean
@@ -75,6 +76,7 @@ const plans = [
 export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const { user } = useSubscription()
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
 
   const createCheckout = async (plan: typeof plans[0]) => {
     const resp = await fetch('/api/payments/dodo/create-checkout', {
@@ -87,9 +89,18 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
     return data.url as string
   }
 
-  const handlePlanSelect = async (plan: typeof plans[0]) => {
+  const handlePlanSelect = (plan: typeof plans[0]) => {
+    setSelectedPlan(plan.id)
+  }
+
+  const handleUpgradeNow = async () => {
+    if (!selectedPlan) return
+
+    const plan = plans.find(p => p.id === selectedPlan)
+    if (!plan) return
+
     try {
-      setIsLoading(plan.id)
+      setIsLoading(selectedPlan)
       const url = await createCheckout(plan)
       window.open(url, '_blank')
     } catch (e) {
@@ -100,118 +111,96 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}} modal>
-      <DialogContent hideCloseButton className="max-w-5xl max-h-[90vh] overflow-y-auto">
+    <AnimatePresence>
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={() => {}} modal>
+          <DialogContent className="max-w-lg border-0 shadow-none bg-transparent p-0 fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <motion.div
+              className="bg-background border rounded-lg shadow-lg p-6"
+              initial={{ opacity: 0, scale: 0.1 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.1 }}
+              transition={{
+                type: "spring",
+                stiffness: 500,
+                damping: 35,
+                duration: 0.5
+              }}
+              style={{
+                transformOrigin: "50% 50%"
+              }}
+            >
         <DialogHeader>
-          <DialogTitle className="text-3xl font-bold text-center flex items-center justify-center gap-2">
-            <Sparkles className="h-8 w-8 text-primary" />
-            Ready to Scale Your Outreach?
-          </DialogTitle>
-          <p className="text-lg text-muted-foreground text-center">
-            Choose a plan to unlock unlimited personalized video creation and advanced features.
+          <DialogTitle className="text-xl font-semibold">Ready to Scale Your Outreach?</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Choose the best plan for your video personalization needs
           </p>
         </DialogHeader>
 
-        {/* Features Summary */}
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 mb-6">
-          <div className="text-center space-y-1.5">
-            <h3 className="text-xl font-semibold">🚀 Unlock Premium Features</h3>
-            <p className="text-muted-foreground">
-              Get access to unlimited video creation and advanced tools:
-            </p>
-            <div className="flex justify-center gap-4 text-sm mt-3">
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Unlimited Videos</span>
+        <div className="space-y-4 mt-6">
+          {/* Plan Cards */}
+          {plans.map((plan, index) => (
+            <motion.div
+              key={plan.id}
+              className={`border-2 rounded-lg p-4 flex items-center justify-between cursor-pointer focus:outline-none transition-colors ${
+                selectedPlan === plan.id
+                  ? 'border-primary bg-primary/5'
+                  : 'border-gray-200'
+              }`}
+              onClick={() => handlePlanSelect(plan)}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                delay: index * 0.1,
+                type: "spring",
+                stiffness: 200,
+                damping: 20
+              }}
+              whileHover={{
+                scale: 1.02
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div>
+                <h3 className="font-medium text-base">{plan.name}</h3>
+                <p className="text-sm text-muted-foreground">{plan.description}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Advanced Analytics</span>
+              <div className="text-right">
+                <span className="font-semibold">{plan.price === "$49.99" ? "Free" : plan.price}</span>
+                {plan.price !== "$49.99" && <span className="text-muted-foreground">/{plan.period}</span>}
               </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                <span>Priority Support</span>
-              </div>
+            </motion.div>
+          ))}
+
+          {/* Terms */}
+          <p className="text-xs text-center text-muted-foreground mt-6">
+            By continuing, you agree to our <span className="underline cursor-pointer">Terms</span>
+          </p>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center text-xs text-muted-foreground">
+              <span className="mr-1">🔒</span>
+              Payment secured by Stripe
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                disabled={isLoading !== null || !selectedPlan}
+                onClick={handleUpgradeNow}
+              >
+                {isLoading ? "Processing..." : selectedPlan ? "Upgrade Now" : "Select a Plan"}
+              </Button>
             </div>
           </div>
-        </div>
-
-        {/* Pricing Plans */}
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          {plans.map((plan) => {
-            const Icon = plan.icon
-            return (
-              <Card
-                key={plan.id}
-                className={`relative transition-all duration-200 ${
-                  plan.popular
-                    ? 'border-primary shadow-lg bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground px-3 py-1 font-semibold">
-                      Most Popular
-                    </Badge>
-                  </div>
-                )}
-
-                <CardHeader className="text-center pb-4">
-                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <Icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <CardDescription className="text-sm min-h-[40px] flex items-center justify-center">
-                    {plan.description}
-                  </CardDescription>
-                  <div className="mt-4">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">/{plan.period}</span>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-3">
-                  <ul className="space-y-1.5 min-h-[120px]">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start text-sm">
-                        <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    onClick={() => handlePlanSelect(plan)}
-                    disabled={isLoading !== null}
-                    className={`w-full ${
-                      plan.popular
-                        ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                        : ''
-                    }`}
-                    variant={plan.popular ? 'default' : 'outline'}
-                    size="lg"
-                  >
-                    {isLoading === plan.id ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
-                        Opening checkout...
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        Choose {plan.name}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </div>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-      </DialogContent>
-    </Dialog>
+            </div>
+            </motion.div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </AnimatePresence>
   )
 }
 
