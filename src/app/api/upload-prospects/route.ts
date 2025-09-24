@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       prospects = body.prospects || [];
 
       // Transform manual prospects to match expected format
-      prospects = prospects.map(p => ({
+      prospects = prospects.map((p: any) => ({
         first_name: p.firstName || p.first_name,
         last_name: p.lastName || p.last_name,
         email: p.email,
