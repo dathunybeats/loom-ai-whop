@@ -166,8 +166,8 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <p className="text-sm text-muted-foreground">{plan.description}</p>
               </div>
               <div className="text-right">
-                <span className="font-semibold">{plan.price === "$49.99" ? "Free" : plan.price}</span>
-                {plan.price !== "$49.99" && <span className="text-muted-foreground">/{plan.period}</span>}
+                <span className="font-semibold">{plan.price}</span>
+                <span className="text-muted-foreground">/{plan.period}</span>
               </div>
             </motion.div>
           ))}
