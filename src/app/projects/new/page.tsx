@@ -114,7 +114,7 @@ export default function NewProjectPage() {
 
   const progress = (currentStep / steps.length) * 100
 
-  // Step 1: Create Project
+  // Step 1: Just validate and move to next step (no project creation yet)
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -126,45 +126,54 @@ export default function NewProjectPage() {
       return
     }
 
-    try {
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: trimmedName,
-          description: description.trim() || null,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create project')
-      }
-
-      setProjectId(result.project.id)
-      setCurrentStep(2)
-    } catch (error: any) {
-      setError(error.message || 'An unexpected error occurred. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    // Just move to next step, don't create project yet
+    setCurrentStep(2)
+    setLoading(false)
   }
 
-  // Step 2: Upload Video - now called automatically when file is selected
+  // Step 2: Create Project and Upload Video
   const handleVideoUpload = async (file: File) => {
-    if (!file || !projectId) return
+    if (!file) return
 
     setVideoUploading(true)
     setUploadProgress(0)
     setError('')
 
     try {
+      let currentProjectId = projectId
+
+      // First create the project if it doesn't exist
+      if (!currentProjectId) {
+        const trimmedName = name.trim()
+        if (!validateName(trimmedName)) {
+          setVideoUploading(false)
+          return
+        }
+
+        const projectResponse = await fetch('/api/projects', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: trimmedName,
+            description: description.trim() || null,
+          }),
+        })
+
+        const projectResult = await projectResponse.json()
+
+        if (!projectResponse.ok) {
+          throw new Error(projectResult.error || 'Failed to create project')
+        }
+
+        currentProjectId = projectResult.project.id
+        setProjectId(currentProjectId)
+      }
+
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('projectId', projectId)
+      formData.append('projectId', currentProjectId!)
 
       // Simulate upload progress (since fetch doesn't support real progress tracking)
       const progressInterval = setInterval(() => {
@@ -199,7 +208,7 @@ export default function NewProjectPage() {
       }, 500)
 
     } catch (error: any) {
-      setError(error.message || 'Failed to upload video')
+      setError(error.message || 'Failed to upload video or create project')
       setVideoUploading(false)
       setUploadProgress(0)
     }
@@ -413,7 +422,7 @@ export default function NewProjectPage() {
                         {loading ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            Creating...
+                            Continue...
                           </>
                         ) : (
                           'Continue to Video'
@@ -439,7 +448,7 @@ export default function NewProjectPage() {
                     <span>Upload Base Video</span>
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Upload your talking head video with [FIRST_NAME] placeholder text
+                    Upload your talking head video with [FIRST_NAME] placeholder text. Your project will be created when you upload the video.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col px-3 pb-3">
@@ -530,7 +539,7 @@ export default function NewProjectPage() {
                     {/* Help Text */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
-                        💡 <strong>Pro tip:</strong> Include "[FIRST_NAME]" in your video where you want prospect names to appear.
+                        💡 <strong>Pro tip:</strong> Include "[FIRST_NAME]" in your video where you want prospect names to appear. Your project will be created when you upload the video.
                       </p>
                     </div>
 
@@ -550,10 +559,10 @@ export default function NewProjectPage() {
                         {videoUploading ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            Uploading...
+                            Creating Project...
                           </>
                         ) : !videoUrl ? (
-                          'Upload Video First'
+                          'Upload Video to Create Project'
                         ) : (
                           'Continue to Prospects'
                         )}
