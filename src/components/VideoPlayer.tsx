@@ -26,6 +26,9 @@ interface VideoPlayerProps {
   poster?: string
   className?: string
   autoPlay?: boolean
+  projectId?: string
+  projectName?: string
+  showShare?: boolean
 }
 
 const FALLBACK_VIDEO_SRC =
@@ -53,6 +56,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   poster,
   className,
   autoPlay = false,
+  projectId,
+  projectName,
+  showShare = false,
 }) => {
   const resolvedSrc = videoUrl || FALLBACK_VIDEO_SRC
 
